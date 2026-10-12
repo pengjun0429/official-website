@@ -14,6 +14,8 @@ interface MemberState {
 const SHEET_ID = "1Iw5EY1LfFF-Ig9tJGVyWNBON20t9oE-0iFVFPPgsjk0";
 const MEMBER_GID = "643747757";
 const OBSERVER_GID = "1983936747";
+const SECRETARIAT_GID = "1303265265";
+const SECRETARIAT_SOURCE = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=${SECRETARIAT_GID}`;
 
 async function fetchSheet(gid: string): Promise<string> {
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
@@ -118,6 +120,8 @@ const router: IRouter = Router();
 // Cache for 5 minutes
 let cachedData: { memberStates: MemberState[]; observerStates: MemberState[]; allStates: MemberState[]; timestamp: number } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
+interface SecretariatPerson { nickname: string; position: string; responsibilities: string; }
+let cachedSecretariat: { people: SecretariatPerson[]; timestamp: number } | null = null;
 
 async function getMemberStates(): Promise<{ memberStates: MemberState[]; observerStates: MemberState[]; allStates: MemberState[] }> {
   if (cachedData && Date.now() - cachedData.timestamp < CACHE_TTL_MS) {
@@ -171,6 +175,38 @@ router.get("/members", async (_req, res) => {
       error: "Failed to fetch member states from Google Sheets",
       message: err instanceof Error ? err.message : "Unknown error",
     });
+  }
+});
+
+router.get("/officials", async (req, res) => {
+  const forceRefresh = req.query.refresh === "1";
+  if (cachedSecretariat && !forceRefresh && Date.now() - cachedSecretariat.timestamp < CACHE_TTL_MS) {
+    res.json({ people: cachedSecretariat.people, lastUpdated: new Date(cachedSecretariat.timestamp).toISOString(), isStale: false, source: SECRETARIAT_SOURCE });
+    return;
+  }
+  try {
+    const rows = parseCSVRows(await fetchSheet(SECRETARIAT_GID));
+    const headers = (rows[0] ?? []).map((header) => header.trim());
+    const column = (names: string[]) => headers.findIndex((header) => names.includes(header));
+    const nameIndex = column(["暱稱", "姓名", "人員名稱"]);
+    const positionIndex = column(["職稱", "職務", "職位"]);
+    const responsibilityIndex = column(["負責區域", "負責部門", "業務範圍"]);
+    if (nameIndex < 0 || positionIndex < 0) throw new Error("秘書處工作表缺少暱稱或職稱欄位。");
+    const people = rows.slice(1).map((row) => ({
+      nickname: row[nameIndex]?.trim() ?? "",
+      position: (row[positionIndex]?.trim() ?? "").replaceAll("祕書", "秘書"),
+      responsibilities: responsibilityIndex >= 0 ? row[responsibilityIndex]?.trim() ?? "" : "",
+    })).filter((person) => person.nickname && person.position);
+    if (!people.length) throw new Error("秘書處工作表目前沒有可顯示的人員資料。");
+    cachedSecretariat = { people, timestamp: Date.now() };
+    res.json({ people, lastUpdated: new Date(cachedSecretariat.timestamp).toISOString(), isStale: false, source: SECRETARIAT_SOURCE });
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch Secretariat personnel from Google Sheets");
+    if (cachedSecretariat) {
+      res.json({ people: cachedSecretariat.people, lastUpdated: new Date(cachedSecretariat.timestamp).toISOString(), isStale: true, source: SECRETARIAT_SOURCE });
+      return;
+    }
+    res.status(500).json({ error: "Failed to fetch Secretariat personnel", message: err instanceof Error ? err.message : "Unknown error" });
   }
 });
 

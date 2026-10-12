@@ -44,6 +44,8 @@ const MEMBER_GID = "1958346154";
 const OBSERVER_GID = "1711083489";
 const VOTER_GID = "569164345";
 const REGISTRATION_GID = "948800346";
+const PUBLIC_DATA_SHEET_ID = "1Iw5EY1LfFF-Ig9tJGVyWNBON20t9oE-0iFVFPPgsjk0";
+const SECRETARIAT_GID = "1303265265";
 const DEFAULT_ADMIN_ID = "1406117683220709486";
 const ADMIN_NONE = 0;
 const ADMIN_TIER1 = 1;
@@ -68,12 +70,14 @@ function csvRows(text: string): string[][] {
   if (cell || row.length) { row.push(cell.trim()); rows.push(row); }
   return rows;
 }
-async function sheet(gid: string) { const r = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`); if (!r.ok) throw new Error(`Google Sheet ${r.status}`); return csvRows(await r.text()); }
+async function sheet(gid: string, spreadsheetId = SHEET_ID) { const r = await fetch(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`); if (!r.ok) throw new Error(`Google Sheet ${r.status}`); return csvRows(await r.text()); }
 interface Member { fullName: string; shortName: string; abbreviation?: string; headOfState?: string; primeMinister?: string; governmentType: string; status: "member" | "observer"; }
 interface Voter { countryName: string; reps: { name: string; id: string }[]; }
 interface RegistrationEntry { countryName: string; voterName: string; id: string; }
+interface Official { nickname: string; position: string; responsibilities: string; }
 let membersCache: { value: { memberStates: Member[]; observerStates: Member[]; allStates: Member[] }; at: number } | null = null;
 let votersCache: { value: Voter[]; at: number } | null = null;
+let officialsCache: { value: Official[]; at: number } | null = null;
 async function members() {
   if (membersCache && Date.now() - membersCache.at < 300000) return membersCache.value;
   const parse = (rows: string[][], status: Member["status"]): Member[] => { const h = rows[0] ?? []; const idx = (n: string) => h.indexOf(n); return rows.slice(1).filter(r => r[idx("國家名稱")]).map(r => ({ fullName: r[idx("國家名稱")] ?? "", shortName: r[idx("國家簡稱")] ?? "", abbreviation: r[idx("國家代號")] || undefined, headOfState: r[idx("最高領袖")] || undefined, primeMinister: r[idx("最高首腦")] || undefined, governmentType: r[idx("國家體制")] ?? "", status })); };
@@ -87,6 +91,25 @@ async function voters() {
 }
 const findVoter = (list: Voter[], id: string) => { for (const v of list) { const rep = v.reps.find(r => r.id === id); if (rep) return { countryName: v.countryName, voterName: rep.name }; } return null; };
 async function registrations() { const rows = await sheet(REGISTRATION_GID); const h = rows[0] ?? []; const idx = (n: string) => h.indexOf(n); return rows.slice(1).map(r => ({ countryName: r[idx("國家名稱")] ?? "", voterName: r[idx("註冊名稱")] ?? "", id: r[idx("註冊ID")] ?? "" })).filter(r => r.id && r.countryName && r.voterName); }
+async function officials(forceRefresh = false) {
+  if (officialsCache && !forceRefresh && Date.now() - officialsCache.at < 300000) return { people: officialsCache.value, lastUpdated: new Date(officialsCache.at).toISOString(), isStale: false };
+  try {
+    const rows = await sheet(SECRETARIAT_GID, PUBLIC_DATA_SHEET_ID);
+    const headers = (rows[0] ?? []).map(h => h.trim());
+    const column = (names: string[]) => headers.findIndex(h => names.includes(h));
+    const nameIndex = column(["暱稱", "姓名", "人員名稱"]);
+    const positionIndex = column(["職稱", "職務", "職位"]);
+    const responsibilityIndex = column(["負責區域", "負責部門", "業務範圍"]);
+    if (nameIndex < 0 || positionIndex < 0) throw new Error("秘書處工作表缺少暱稱或職稱欄位。");
+    const people = rows.slice(1).map(row => ({ nickname: row[nameIndex]?.trim() ?? "", position: (row[positionIndex]?.trim() ?? "").replaceAll("祕書", "秘書"), responsibilities: responsibilityIndex >= 0 ? row[responsibilityIndex]?.trim() ?? "" : "" })).filter(person => person.nickname && person.position);
+    if (!people.length) throw new Error("秘書處工作表目前沒有可顯示的人員資料。");
+    officialsCache = { value: people, at: Date.now() };
+    return { people, lastUpdated: new Date(officialsCache.at).toISOString(), isStale: false };
+  } catch (error) {
+    if (officialsCache) return { people: officialsCache.value, lastUpdated: new Date(officialsCache.at).toISOString(), isStale: true };
+    throw error;
+  }
+}
 
 const enc = new TextEncoder();
 async function hashPassword(password: string) { const salt = crypto.getRandomValues(new Uint8Array(16)); const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]); const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" }, key, 256); return `pbkdf2$${PBKDF2_ITERATIONS}$${toB64(salt)}$${toB64(new Uint8Array(bits))}`; }
@@ -119,6 +142,7 @@ app.use("/*", async (c, next) => {
 });
 app.get("/api/healthz", c => c.json({ status: "ok" }));
 app.get("/api/members", async c => { try { return c.json({ ...(await members()), cached: Boolean(membersCache), lastUpdated: membersCache ? new Date(membersCache.at).toISOString() : null }); } catch (e) { return c.json({ error: "Failed to fetch member states", message: String(e) }, 500); } });
+app.get("/api/officials", async c => { try { return c.json({ ...(await officials(c.req.query("refresh") === "1")), source: `https://docs.google.com/spreadsheets/d/${PUBLIC_DATA_SHEET_ID}/edit#gid=${SECRETARIAT_GID}` }); } catch (e) { return c.json({ error: "Failed to fetch Secretariat personnel", message: String(e) }, 500); } });
 app.get("/api/voters", async c => { try { return c.json(await voters()); } catch (e) { return c.json({ error: "Failed to fetch voters", message: String(e) }, 500); } });
 
 app.get("/api/votes", async c => { const rows = await c.env.DB.prepare("SELECT v.*, COUNT(b.id) AS ballot_count FROM votes v LEFT JOIN ballots b ON b.vote_id = v.id GROUP BY v.id ORDER BY v.created_at ASC").all<VoteRow & { ballot_count: number }>(); return c.json((rows.results ?? []).map(v => asVote(v, v.ballot_count))); });

@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/Layout";
 import Home from "@/pages/Home";
 import Members from "@/pages/Members";
+import Officials from "@/pages/Officials";
 import Regulations from "@/pages/Regulations";
 import Charter from "@/pages/Charter";
 import Votes from "@/pages/Votes";
@@ -27,6 +28,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/members" component={Members} />
+        <Route path="/officials" component={Officials} />
         <Route path="/regulations" component={Regulations} />
         <Route path="/charter" component={Charter} />
         <Route path="/votes" component={Votes} />
