@@ -14,11 +14,12 @@ interface MemberState {
 const SHEET_ID = "1Iw5EY1LfFF-Ig9tJGVyWNBON20t9oE-0iFVFPPgsjk0";
 const MEMBER_GID = "643747757";
 const OBSERVER_GID = "1983936747";
-const SECRETARIAT_GID = "1303265265";
-const SECRETARIAT_SOURCE = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=${SECRETARIAT_GID}`;
+const SECRETARIAT_SHEET_ID = "1ebE_1cZa2nqcdPwrFq_60wmElO1GDNtoG8zFPciqHFo";
+const SECRETARIAT_GID = "1939375804";
+const SECRETARIAT_SOURCE = `https://docs.google.com/spreadsheets/d/${SECRETARIAT_SHEET_ID}/edit#gid=${SECRETARIAT_GID}`;
 
-async function fetchSheet(gid: string): Promise<string> {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
+async function fetchSheet(gid: string, spreadsheetId = SHEET_ID): Promise<string> {
+  const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
   const res = await fetch(url, { redirect: "follow" });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -185,7 +186,7 @@ router.get("/officials", async (req, res) => {
     return;
   }
   try {
-    const rows = parseCSVRows(await fetchSheet(SECRETARIAT_GID));
+    const rows = parseCSVRows(await fetchSheet(SECRETARIAT_GID, SECRETARIAT_SHEET_ID));
     const headers = (rows[0] ?? []).map((header) => header.trim());
     const column = (names: string[]) => headers.findIndex((header) => names.includes(header));
     const nameIndex = column(["暱稱", "姓名", "人員名稱"]);

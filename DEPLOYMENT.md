@@ -67,4 +67,4 @@ Cloudflare Pages 設定建議：
 - Worker 使用 Web Crypto PBKDF2 儲存密碼雜湊，不依賴 Node.js native module。
 - 第一次部署後請立即修改預設超級管理員密碼；預設帳號仍沿用既有 Discord ID，密碼為 `changeme`。
 - 成員與投票資格資料仍由公開 Google Sheet 讀取；投票與帳戶資料則完全寫入 D1。
-- 公職與秘書處名錄從[公開資料總表的「秘書處成員列表」](https://docs.google.com/spreadsheets/d/1Iw5EY1LfFF-Ig9tJGVyWNBON20t9oE-0iFVFPPgsjk0/edit#gid=1303265265)同步，工作表需可公開讀取；欄位至少須有「暱稱」與「職稱」，「負責區域」可選。API 快取五分鐘，網站每五分鐘自動更新，亦可在名錄頁按「立即同步」。
+- 公職與秘書處名錄從[官方網站資料 Sheet 模板的「秘書處名冊」](https://docs.google.com/spreadsheets/d/1ebE_1cZa2nqcdPwrFq_60wmElO1GDNtoG8zFPciqHFo/edit#gid=1939375804)同步，工作表需可公開讀取；欄位為「暱稱」、「職稱」、「負責區域」。API 快取五分鐘，網站每五分鐘自動更新，亦可在名錄頁按「立即同步」。

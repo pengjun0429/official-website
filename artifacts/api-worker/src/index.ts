@@ -44,8 +44,7 @@ const MEMBER_GID = "1958346154";
 const OBSERVER_GID = "1711083489";
 const VOTER_GID = "569164345";
 const REGISTRATION_GID = "948800346";
-const PUBLIC_DATA_SHEET_ID = "1Iw5EY1LfFF-Ig9tJGVyWNBON20t9oE-0iFVFPPgsjk0";
-const SECRETARIAT_GID = "1303265265";
+const SECRETARIAT_GID = "1939375804";
 const DEFAULT_ADMIN_ID = "1406117683220709486";
 const ADMIN_NONE = 0;
 const ADMIN_TIER1 = 1;
@@ -94,7 +93,7 @@ async function registrations() { const rows = await sheet(REGISTRATION_GID); con
 async function officials(forceRefresh = false) {
   if (officialsCache && !forceRefresh && Date.now() - officialsCache.at < 300000) return { people: officialsCache.value, lastUpdated: new Date(officialsCache.at).toISOString(), isStale: false };
   try {
-    const rows = await sheet(SECRETARIAT_GID, PUBLIC_DATA_SHEET_ID);
+    const rows = await sheet(SECRETARIAT_GID);
     const headers = (rows[0] ?? []).map(h => h.trim());
     const column = (names: string[]) => headers.findIndex(h => names.includes(h));
     const nameIndex = column(["暱稱", "姓名", "人員名稱"]);
@@ -142,7 +141,7 @@ app.use("/*", async (c, next) => {
 });
 app.get("/api/healthz", c => c.json({ status: "ok" }));
 app.get("/api/members", async c => { try { return c.json({ ...(await members()), cached: Boolean(membersCache), lastUpdated: membersCache ? new Date(membersCache.at).toISOString() : null }); } catch (e) { return c.json({ error: "Failed to fetch member states", message: String(e) }, 500); } });
-app.get("/api/officials", async c => { try { return c.json({ ...(await officials(c.req.query("refresh") === "1")), source: `https://docs.google.com/spreadsheets/d/${PUBLIC_DATA_SHEET_ID}/edit#gid=${SECRETARIAT_GID}` }); } catch (e) { return c.json({ error: "Failed to fetch Secretariat personnel", message: String(e) }, 500); } });
+app.get("/api/officials", async c => { try { return c.json({ ...(await officials(c.req.query("refresh") === "1")), source: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=${SECRETARIAT_GID}` }); } catch (e) { return c.json({ error: "Failed to fetch Secretariat personnel", message: String(e) }, 500); } });
 app.get("/api/voters", async c => { try { return c.json(await voters()); } catch (e) { return c.json({ error: "Failed to fetch voters", message: String(e) }, 500); } });
 
 app.get("/api/votes", async c => { const rows = await c.env.DB.prepare("SELECT v.*, COUNT(b.id) AS ballot_count FROM votes v LEFT JOIN ballots b ON b.vote_id = v.id GROUP BY v.id ORDER BY v.created_at ASC").all<VoteRow & { ballot_count: number }>(); return c.json((rows.results ?? []).map(v => asVote(v, v.ballot_count))); });
