@@ -222,9 +222,9 @@ async function pollVoteAnnouncements() {
         return recentMessages.find(message => message.author.id === client.user.id
           && message.embeds.some(embed => embed.footer?.text?.includes(marker))) || null;
       },
-      send: async (_vote, payload) => {
+      send: async (vote, payload) => {
         const channel = await getAnnouncementChannel();
-        const roleMentionOptions = buildVoteAnnouncementRoleOptions(VOTE_ANNOUNCEMENT.roleId);
+        const roleMentionOptions = buildVoteAnnouncementRoleOptions(VOTE_ANNOUNCEMENT.roleId, vote.operatorName);
         return channel.send({ ...payload, ...roleMentionOptions });
       },
       markSent: async (voteId, claimToken, discordMessageId) => {

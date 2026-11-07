@@ -42,3 +42,16 @@ test("vote-start role mentions allow only the configured dedicated role", () => 
     allowedMentions: { roles: ["1556182329238618154"] },
   });
 });
+
+test("vote-start mentions show the operator as small text beneath the role", () => {
+  assert.deepEqual(buildVoteAnnouncementRoleOptions("1556182329238618154", "王小明"), {
+    content: "<@&1556182329238618154>\n-# 操作者：王小明",
+    allowedMentions: { roles: ["1556182329238618154"] },
+  });
+});
+
+test("operator names cannot inject mentions or extra announcement lines", () => {
+  const options = buildVoteAnnouncementRoleOptions("1556182329238618154", "@everyone\n-# 假操作者");
+  assert.equal(options.content, "<@&1556182329238618154>\n-# 操作者：@\u200beveryone -\\# 假操作者");
+  assert.deepEqual(options.allowedMentions, { roles: ["1556182329238618154"] });
+});

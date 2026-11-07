@@ -46,6 +46,7 @@ interface VoteRow {
   regular_meeting_number: number | null;
   starts_at: string | null;
   is_published: number;
+  operator_name?: string | null;
   notify_started_at: string | null;
   notify_closing_soon_at: string | null;
   notify_closed_at: string | null;
@@ -535,7 +536,10 @@ app.get("/api/internal/bot/vote-announcements/due", async c => {
     return c.json({ error: "Unauthorized" }, 401, { "Cache-Control": "no-store" });
   }
   const rows = await c.env.DB.prepare(`
-    SELECT v.id, v.name, v.description, v.deadline, v.custom_id, v.regular_meeting_number, v.starts_at
+    SELECT v.id, v.name, v.description, v.deadline, v.custom_id, v.regular_meeting_number, v.starts_at,
+      (SELECT l.actor_name FROM admin_audit_logs l
+        WHERE l.action = 'vote.create' AND l.target_type = 'vote' AND l.target_id = CAST(v.id AS TEXT)
+        ORDER BY l.id ASC LIMIT 1) AS operator_name
     FROM votes v
     WHERE v.is_published = 1
       AND v.is_closed = 0
@@ -558,6 +562,7 @@ app.get("/api/internal/bot/vote-announcements/due", async c => {
     regularMeetingNumber: vote.regular_meeting_number,
     name: vote.name,
     description: vote.description,
+    operatorName: vote.operator_name ?? "未記錄",
     startsAt: storedUtcInstantToIso(vote.starts_at),
     deadline: storedUtcInstantToIso(vote.deadline) ?? vote.deadline,
     isPublished: true,
@@ -598,7 +603,10 @@ app.post("/api/internal/bot/vote-announcements/:voteId/claim", async c => {
   `).bind(body.data.claimToken, voteId).run();
 
   const claimed = await c.env.DB.prepare(`
-    SELECT v.id, v.name, v.description, v.deadline, v.custom_id, v.regular_meeting_number, v.starts_at
+    SELECT v.id, v.name, v.description, v.deadline, v.custom_id, v.regular_meeting_number, v.starts_at,
+      (SELECT l.actor_name FROM admin_audit_logs l
+        WHERE l.action = 'vote.create' AND l.target_type = 'vote' AND l.target_id = CAST(v.id AS TEXT)
+        ORDER BY l.id ASC LIMIT 1) AS operator_name
     FROM votes v
     JOIN vote_announcement_deliveries d ON d.vote_id = v.id
     WHERE v.id = ? AND d.status = 'sending' AND d.claim_token = ?
@@ -613,6 +621,7 @@ app.post("/api/internal/bot/vote-announcements/:voteId/claim", async c => {
       regularMeetingNumber: claimed.regular_meeting_number,
       name: claimed.name,
       description: claimed.description,
+      operatorName: claimed.operator_name ?? "未記錄",
       startsAt: storedUtcInstantToIso(claimed.starts_at),
       deadline: storedUtcInstantToIso(claimed.deadline) ?? claimed.deadline,
       isPublished: true,
