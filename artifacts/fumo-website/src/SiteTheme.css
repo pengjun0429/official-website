@@ -551,6 +551,19 @@ html.dark .fumo-theme-toggle--mobile { border-color: var(--site-line); }
   background: var(--vote-paper) !important;
   color: var(--vote-ink);
 }
+
+/* Add dark color list */
+html.dark .fumo-voting-page {
+  --vote-blue: #85B7CC;
+  --vote-ink: #d2d2d7;
+  --vote-muted: #343436;
+  --vote-line: #1d1d1f;
+  --vote-paper: #000;
+  --vote-soft: #080808;
+  background: var(--vote-paper) !important;
+  color: var(--vote-ink);
+}
+
 .fumo-voting-page .container {
   padding-inline: var(--site-gutter, clamp(22px, 5.6vw, 84px)) !important;
 }
