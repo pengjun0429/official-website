@@ -7,6 +7,7 @@ import { deliverWebhook, dispatchVoteEvent, DISCORD_ROLE_ID, normalizeDiscordRol
 import { canEditVoteDraft, validateVoteDraftFields } from "./voteDrafts";
 import { hasValidBotBearerToken, storedUtcInstantToIso } from "./botVoteAnnouncements";
 import { botAnnouncementSchema } from "./botAnnouncementSchema";
+import { ACTIVITY_BOARD, DEFAULT_ACTIVITY_CONTENT, activityContentSchema, createInitialActivityState, isActivityInstanceId } from "./activityContent";
 interface Env {
   DB: D1Database;
   CORS_ORIGIN?: string;
@@ -358,6 +359,82 @@ app.get("/api/healthz", c => {
     background(c, runVoteNotificationSweep(c.env).catch(error => console.error("Vote notification sweep failed", error)));
   }
   return c.json({ status: "ok" });
+});
+app.get("/api/activity/content", async c => {
+  const row = await c.env.DB.prepare("SELECT content_json, updated_at FROM discord_activity_content WHERE id = 1")
+    .first<{ content_json: string; updated_at: string }>();
+  if (!row) return c.json({ content: DEFAULT_ACTIVITY_CONTENT, updatedAt: null }, 200, { "Cache-Control": "no-store" });
+  let content = DEFAULT_ACTIVITY_CONTENT;
+  try {
+    const parsed = activityContentSchema.safeParse(JSON.parse(row.content_json));
+    if (parsed.success) content = parsed.data;
+  } catch { /* Keep the safe built-in copy if stored JSON is corrupt. */ }
+  return c.json({ content, updatedAt: row.updated_at }, 200, { "Cache-Control": "no-store" });
+});
+app.get("/api/activity/instances/:instanceId", async c => {
+  const instanceId = c.req.param("instanceId");
+  if (!isActivityInstanceId(instanceId)) return c.json({ error: "Invalid activity instance." }, 400);
+  const initial = createInitialActivityState();
+  await c.env.DB.prepare("INSERT OR IGNORE INTO discord_activity_instances (instance_id, state_json) VALUES (?, ?)")
+    .bind(instanceId, JSON.stringify(initial)).run();
+  const row = await c.env.DB.prepare("SELECT state_json, revision, updated_at FROM discord_activity_instances WHERE instance_id = ?")
+    .bind(instanceId).first<{ state_json: string; revision: number; updated_at: string }>();
+  if (!row) return c.json({ error: "Unable to load activity state." }, 500);
+  let state = initial;
+  try {
+    const parsed = JSON.parse(row.state_json);
+    if (Array.isArray(parsed.rotations) && parsed.rotations.length === ACTIVITY_BOARD.length && parsed.rotations.every((value: unknown) => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 3) && Number.isInteger(parsed.moves) && parsed.moves >= 0 && typeof parsed.startedAt === "string") {
+      state = { rotations: parsed.rotations, moves: parsed.moves, startedAt: parsed.startedAt };
+    }
+  } catch { /* A malformed row is served as a fresh safe board. */ }
+  return c.json({ state, revision: row.revision, updatedAt: row.updated_at }, 200, { "Cache-Control": "no-store" });
+});
+app.post("/api/activity/instances/:instanceId/rotate", async c => {
+  const instanceId = c.req.param("instanceId");
+  if (!isActivityInstanceId(instanceId)) return c.json({ error: "Invalid activity instance." }, 400);
+  const body = z.object({ cellIndex: z.number().int().min(0).max(ACTIVITY_BOARD.length - 1) }).safeParse(await parseJson(c));
+  if (!body.success) return c.json({ error: "Invalid pipe selection." }, 400);
+  const { cellIndex } = body.data;
+  if (!["straight", "corner"].includes(ACTIVITY_BOARD[cellIndex].kind)) return c.json({ error: "This pipe cannot be rotated." }, 400);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const initial = createInitialActivityState();
+    await c.env.DB.prepare("INSERT OR IGNORE INTO discord_activity_instances (instance_id, state_json) VALUES (?, ?)")
+      .bind(instanceId, JSON.stringify(initial)).run();
+    const row = await c.env.DB.prepare("SELECT state_json, revision FROM discord_activity_instances WHERE instance_id = ?")
+      .bind(instanceId).first<{ state_json: string; revision: number }>();
+    if (!row) break;
+    let rotations = [...initial.rotations];
+    let moves = 0;
+    let startedAt = initial.startedAt;
+    try {
+      const parsed = JSON.parse(row.state_json);
+      if (Array.isArray(parsed.rotations) && parsed.rotations.length === ACTIVITY_BOARD.length && parsed.rotations.every((value: unknown) => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 3)) rotations = parsed.rotations;
+      if (Number.isInteger(parsed.moves) && parsed.moves >= 0) moves = parsed.moves;
+      if (typeof parsed.startedAt === "string") startedAt = parsed.startedAt;
+    } catch { /* Use a fresh state if the stored JSON is malformed. */ }
+    rotations[cellIndex] = (rotations[cellIndex] + 1) % 4;
+    const state = { rotations, moves: moves + 1, startedAt };
+    const result = await c.env.DB.prepare("UPDATE discord_activity_instances SET state_json = ?, revision = revision + 1, updated_at = datetime('now') WHERE instance_id = ? AND revision = ?")
+      .bind(JSON.stringify(state), instanceId, row.revision).run();
+    if ((result.meta?.changes ?? 0) === 1) return c.json({ state, revision: row.revision + 1 });
+  }
+  return c.json({ error: "Board changed at the same time. Please try again." }, 409);
+});
+app.post("/api/activity/instances/:instanceId/reset", async c => {
+  const instanceId = c.req.param("instanceId");
+  if (!isActivityInstanceId(instanceId)) return c.json({ error: "Invalid activity instance." }, 400);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const initial = createInitialActivityState();
+    await c.env.DB.prepare("INSERT OR IGNORE INTO discord_activity_instances (instance_id, state_json) VALUES (?, ?)")
+      .bind(instanceId, JSON.stringify(initial)).run();
+    const row = await c.env.DB.prepare("SELECT revision FROM discord_activity_instances WHERE instance_id = ?")
+      .bind(instanceId).first<{ revision: number }>();
+    if (!row) break;
+    const result = await c.env.DB.prepare("UPDATE discord_activity_instances SET state_json = ?, revision = revision + 1, updated_at = datetime('now') WHERE instance_id = ? AND revision = ?")
+      .bind(JSON.stringify(initial), instanceId, row.revision).run();
+    if ((result.meta?.changes ?? 0) === 1) return c.json({ state: initial, revision: row.revision + 1 });
+  }
+  return c.json({ error: "Board changed at the same time. Please try again." }, 409);
 });
 app.get("/api/auth/google/start", async c => {
   const clientId = c.env.GOOGLE_CLIENT_ID?.trim();
@@ -974,6 +1051,20 @@ app.get("/api/admin/bot/status", async c => {
   const result = await botApiJson(c.env, "/healthz");
   const data = result.data && typeof result.data === "object" ? result.data as Record<string, unknown> : {};
   return c.json(result.ok ? { ...data, apiFeatures: { announcementMode: true } } : result.data, (result.ok ? 200 : result.status) as any);
+});
+app.put("/api/admin/bot/activity", async c => {
+  const actor = await currentAccount(c);
+  if (!actor || actor.admin_level < ADMIN_TIER1) return c.json({ error: "管理員權限不足。" }, 403);
+  const body = activityContentSchema.safeParse(await parseJson(c));
+  if (!body.success) return c.json({ error: "活動內容格式不正確，請檢查各欄位長度與時間限制。", details: body.error.issues }, 400);
+  const content = body.data;
+  await c.env.DB.batch([
+    c.env.DB.prepare("INSERT INTO discord_activity_content (id, content_json, updated_by, updated_by_name, updated_at) VALUES (1, ?, ?, ?, datetime('now')) ON CONFLICT(id) DO UPDATE SET content_json = excluded.content_json, updated_by = excluded.updated_by, updated_by_name = excluded.updated_by_name, updated_at = datetime('now')")
+      .bind(JSON.stringify(content), actor.voter_id, actor.voter_name),
+    auditStatement(c.env.DB, actor, "discord.activity_content_updated", "discord_activity", "default", { title: content.title, timeLimitSeconds: content.timeLimitSeconds }),
+  ]);
+  const saved = await c.env.DB.prepare("SELECT updated_at FROM discord_activity_content WHERE id = 1").first<{ updated_at: string }>();
+  return c.json({ content, updatedAt: saved?.updated_at ?? null });
 });
 app.get("/api/admin/bot/channels", async c => {
   const actor = await currentAccount(c);

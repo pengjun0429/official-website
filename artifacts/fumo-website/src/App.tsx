@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -28,8 +28,8 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { applySeoMetadata, getRouteSeo } from "@/lib/seo";
-
 const queryClient = new QueryClient();
+const CircuitActivity = lazy(() => import("@/pages/CircuitActivity"));
 
 function SeoHead() {
   const [location] = useLocation();
@@ -44,6 +44,10 @@ function SeoHead() {
 }
 
 function Router() {
+  const [location] = useLocation();
+  if (/^\/activity\/?$/.test(location.split(/[?#]/)[0])) {
+    return <Suspense fallback={<div role="status" className="min-h-screen p-6 text-sm text-muted-foreground">正在載入 Discord 活動…</div>}><CircuitActivity /></Suspense>;
+  }
   return (
     <Layout>
       <SeoHead />

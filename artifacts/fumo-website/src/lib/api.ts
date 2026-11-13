@@ -62,3 +62,61 @@ export async function sendBotAnnouncement(payload: { channelId: string; mode?: B
   if (!response.ok) throw new Error(data.error || "公告發布失敗。");
   return data;
 }
+
+export interface DiscordActivityContent {
+  title: string;
+  subtitle: string;
+  introduction: string;
+  instructions: string;
+  victoryMessage: string;
+  timeLimitSeconds: number;
+}
+export interface DiscordActivityState {
+  rotations: number[];
+  moves: number;
+  startedAt: string;
+}
+export interface DiscordActivityContentResponse {
+  content: DiscordActivityContent;
+  updatedAt: string | null;
+}
+export interface DiscordActivityInstanceResponse {
+  state: DiscordActivityState;
+  revision: number;
+  updatedAt?: string;
+}
+
+async function activityJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await apiFetch(path, init);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "無法連線到活動服務。");
+  return data;
+}
+
+export function fetchDiscordActivityContent(): Promise<DiscordActivityContentResponse> {
+  return activityJson("/api/activity/content");
+}
+
+export function saveDiscordActivityContent(content: DiscordActivityContent): Promise<DiscordActivityContentResponse> {
+  return activityJson("/api/admin/bot/activity", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(content),
+  });
+}
+
+export function fetchDiscordActivityInstance(instanceId: string): Promise<DiscordActivityInstanceResponse> {
+  return activityJson(`/api/activity/instances/${encodeURIComponent(instanceId)}`);
+}
+
+export function rotateDiscordActivityPipe(instanceId: string, cellIndex: number): Promise<DiscordActivityInstanceResponse> {
+  return activityJson(`/api/activity/instances/${encodeURIComponent(instanceId)}/rotate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cellIndex }),
+  });
+}
+
+export function resetDiscordActivity(instanceId: string): Promise<DiscordActivityInstanceResponse> {
+  return activityJson(`/api/activity/instances/${encodeURIComponent(instanceId)}/reset`, { method: "POST" });
+}

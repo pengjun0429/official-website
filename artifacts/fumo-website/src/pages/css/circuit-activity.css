@@ -1,0 +1,114 @@
+.circuit-activity {
+  min-height: 100vh;
+  padding: clamp(14px, 3vw, 32px);
+  background: #f6f7f8;
+  color: #16191c;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+.circuit-activity * { box-sizing: border-box; }
+.circuit-activity-shell {
+  width: min(100%, 840px);
+  margin: 0 auto;
+  padding: clamp(18px, 3vw, 32px);
+  border: 1px solid #d9dfe3;
+  background: #fff;
+  box-shadow: 0 12px 40px rgba(16, 35, 46, .06);
+}
+.circuit-activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e9ec;
+}
+.circuit-activity-mark,
+.circuit-activity-live { display: inline-flex; align-items: center; gap: 8px; }
+.circuit-activity-mark { color: #00334d; font-size: 13px; font-weight: 750; letter-spacing: .12em; }
+.circuit-activity-live { color: #276b55; font-size: 12px; font-weight: 650; }
+.circuit-activity-live.is-preview { color: #5a6268; }
+.circuit-activity-intro { padding: clamp(20px, 4vw, 32px) 0 22px; }
+.circuit-activity-kicker { margin: 0 0 8px; color: #52616a; font-size: 10px; font-weight: 700; letter-spacing: .18em; }
+.circuit-activity-intro h1 { margin: 0; color: #00334d; font-size: clamp(25px, 5vw, 38px); line-height: 1.2; letter-spacing: -.025em; }
+.circuit-activity-subtitle { margin: 9px 0 0; color: #303b42; font-size: clamp(15px, 2.8vw, 19px); font-weight: 650; }
+.circuit-activity-description { max-width: 66ch; margin: 12px 0 0; color: #4b555b; font-size: 14px; line-height: 1.75; white-space: pre-wrap; }
+.circuit-game { padding: clamp(14px, 3vw, 24px); border: 1px solid #dbe1e5; background: #fbfcfc; }
+.circuit-game-topline { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; max-width: 450px; margin: 0 auto 16px; }
+.circuit-game-topline > div { display: grid; gap: 4px; }
+.circuit-game-topline > div:last-child { text-align: right; }
+.circuit-label { color: #657078; font-size: 11px; font-weight: 650; letter-spacing: .03em; }
+.circuit-game-topline strong { color: #00334d; font-size: 21px; font-variant-numeric: tabular-nums; }
+.circuit-game-topline strong.is-warning { color: #a13b2b; }
+.circuit-game-topline small { font-size: 12px; font-weight: 500; }
+.circuit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: min(100%, 450px);
+  margin: 0 auto;
+  gap: clamp(5px, 1.4vw, 10px);
+  padding: clamp(7px, 2vw, 12px);
+  border: 1px solid #d6e0e5;
+  background: #eef3f5;
+}
+.activity-cell {
+  position: relative;
+  display: flex;
+  aspect-ratio: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  overflow: hidden;
+  border: 1px solid #ccd5da;
+  border-radius: 2px;
+  background: #fff;
+  color: #31434d;
+  transition: border-color .15s ease, background-color .15s ease, transform .15s ease;
+}
+button.activity-cell { cursor: pointer; }
+button.activity-cell:hover:not(:disabled) { border-color: #00334d; background: #f3f8fa; transform: translateY(-1px); }
+button.activity-cell:focus-visible { outline: 3px solid #347d9c; outline-offset: 2px; z-index: 1; }
+button.activity-cell:disabled { cursor: default; }
+.activity-cell.is-powered { border-color: #1e8769; background: #e7f5ef; }
+.activity-cell.is-terminal { border-color: #00334d; background: #00334d; color: #fff; }
+.activity-cell.is-terminal.is-powered { border-color: #176b55; background: #176b55; }
+.activity-cell.is-empty { border-style: dashed; background: #f4f6f7; color: #839098; }
+.activity-pipe-svg { width: min(78%, 66px); height: auto; overflow: visible; }
+.activity-pipe-svg line { stroke: #526a77; stroke-width: 12; stroke-linecap: round; }
+.activity-pipe-svg circle { fill: #526a77; }
+.activity-cell.is-powered .activity-pipe-svg line { stroke: #168666; }
+.activity-cell.is-powered .activity-pipe-svg circle { fill: #168666; }
+.activity-cell.is-terminal .activity-pipe-svg line { stroke: #d6e8f0; }
+.activity-cell.is-terminal .activity-pipe-svg circle { fill: #d6e8f0; }
+.activity-cell.is-terminal.is-powered .activity-pipe-svg line,
+.activity-cell.is-terminal.is-powered .activity-pipe-svg circle { stroke: #b9f1d7; fill: #b9f1d7; }
+.activity-pipe-label { margin-top: 1px; font-size: clamp(9px, 1.8vw, 11px); font-weight: 650; line-height: 1.15; text-align: center; }
+.circuit-endpoints { display: flex; justify-content: space-between; gap: 12px; width: min(100%, 450px); margin: 11px auto 0; color: #59656c; font-size: 11px; }
+.circuit-endpoints span { display: inline-flex; align-items: center; gap: 6px; }
+.endpoint-dot { width: 8px; height: 8px; border-radius: 50%; }
+.source-dot { background: #00334d; }
+.goal-dot { background: #168666; }
+.circuit-message { width: min(100%, 450px); margin: 14px auto 0; padding: 10px 12px; border: 1px solid; font-size: 13px; line-height: 1.6; }
+.circuit-message.is-success { border-color: #9ad5bd; background: #e7f5ef; color: #155d48; }
+.circuit-message.is-error { border-color: #e6b6ad; background: #fff0ed; color: #873529; }
+.circuit-loading { margin: 14px 0 0; color: #657078; font-size: 12px; text-align: center; }
+.circuit-reset-button { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; margin: 14px auto 0; padding: 0 14px; border: 1px solid #00334d; background: #00334d; color: #fff; font: inherit; font-size: 13px; cursor: pointer; }
+.circuit-reset-button:hover:not(:disabled) { background: #074c6d; }
+.circuit-reset-button:focus-visible { outline: 3px solid #347d9c; outline-offset: 2px; }
+.circuit-reset-button:disabled { opacity: .7; cursor: default; }
+.circuit-activity-footer { margin-top: 19px; padding-top: 16px; border-top: 1px solid #e5e9ec; }
+.circuit-activity-footer p { margin: 6px 0 8px; color: #414c53; font-size: 13px; line-height: 1.75; white-space: pre-wrap; }
+.circuit-sync-note { color: #727c82; font-size: 11px; line-height: 1.6; }
+@media (max-width: 500px) {
+  .circuit-activity { padding: 0; background: #fff; }
+  .circuit-activity-shell { min-height: 100vh; padding: 16px; border-width: 0; box-shadow: none; }
+  .circuit-activity-intro { padding-top: 21px; }
+  .circuit-game { padding: 12px 9px; }
+  .circuit-game-topline { width: calc(100% - 12px); }
+  .activity-pipe-svg { width: 82%; }
+  .circuit-endpoints { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .activity-cell { transition: none; }
+}
