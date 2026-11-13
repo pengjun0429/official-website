@@ -15,6 +15,7 @@ import {
 import { createCountryEmbedData, findCountryMatches, formatCountryMatches, getPublicRepresentativeNames } from "./countryLookup.js";
 import {
   Client,
+  ActivityType,
   GatewayIntentBits,
   ActionRowBuilder,
   ButtonBuilder,
@@ -44,6 +45,13 @@ const ANNOUNCEMENT_ROLE_ID = process.env.ANNOUNCEMENT_ROLE_ID || "";
 const VOTE_ANNOUNCEMENT = getVoteAnnouncementConfig(process.env);
 const API_BASE_URL = process.env.FUMO_API_BASE_URL.replace(/\/$/, "");
 const BOT_API_SECRET = process.env.FUMO_BOT_API_SECRET || "";
+const BOT_PRESENCE_ACTIVITY_TYPES = Object.freeze({
+  custom: ActivityType.Custom,
+  playing: ActivityType.Playing,
+  watching: ActivityType.Watching,
+  listening: ActivityType.Listening,
+  competing: ActivityType.Competing,
+});
 const WEBSITE_URL = process.env.FUMO_WEBSITE_URL || "https://www.micronationfumo.org";
 const ADMIN_IDS = new Set((process.env.FUMO_BOT_ADMIN_IDS || "").split(",").map(value => value.trim()).filter(Boolean));
 const MEMBER_ROLE_ID = process.env.FUMO_MEMBER_ROLE_ID || "1248257759195955343";
@@ -258,6 +266,51 @@ function startVoteAnnouncementPolling() {
   }
   void pollVoteAnnouncements();
   const timer = setInterval(() => void pollVoteAnnouncements(), VOTE_ANNOUNCEMENT_POLL_INTERVAL_MS);
+  timer.unref?.();
+}
+
+const BOT_PRESENCE_POLL_INTERVAL_MS = 30_000;
+let botPresencePollInProgress = false;
+let lastAppliedBotPresence = null;
+
+async function pollBotPresence() {
+  if (!BOT_API_SECRET || botPresencePollInProgress || !client.isReady()) return;
+  botPresencePollInProgress = true;
+  try {
+    const settings = await fumoBotApi("/api/internal/bot/presence");
+    const activityType = settings.activityType;
+    const activityText = typeof settings.activityText === "string" ? settings.activityText.trim() : null;
+    if (!Object.prototype.hasOwnProperty.call(BOT_PRESENCE_ACTIVITY_TYPES, activityType)
+      || activityText === null
+      || activityText.length > 128
+      || /[\r\n\u0000]/.test(activityText)) {
+      throw new Error("Worker returned invalid Bot presence settings");
+    }
+    const presenceKey = JSON.stringify([activityType, activityText]);
+    if (presenceKey === lastAppliedBotPresence) return;
+    if (activityText && activityType === "custom") {
+      client.user.setPresence({ activities: [{ name: "Custom Status", type: ActivityType.Custom, state: activityText }] });
+    } else if (activityText) {
+      client.user.setActivity(activityText, { type: BOT_PRESENCE_ACTIVITY_TYPES[activityType] });
+    } else {
+      client.user.setPresence({ activities: [] });
+    }
+    lastAppliedBotPresence = presenceKey;
+    logAction("bot.presence.updated", { activityType, enabled: Boolean(activityText), textLength: activityText.length });
+  } catch (error) {
+    console.error("Bot presence sync failed", error?.message || error);
+  } finally {
+    botPresencePollInProgress = false;
+  }
+}
+
+function startBotPresencePolling() {
+  if (!BOT_API_SECRET) {
+    console.warn("Bot presence sync is disabled until FUMO_BOT_API_SECRET is configured.");
+    return;
+  }
+  void pollBotPresence();
+  const timer = setInterval(() => void pollBotPresence(), BOT_PRESENCE_POLL_INTERVAL_MS);
   timer.unref?.();
 }
 
@@ -865,7 +918,8 @@ client.once("ready", async readyClient => {
     console.error("Bot application owner lookup failed; owner-only commands will fail closed until Discord can be reached", error?.stack || error);
   }
   startVoteAnnouncementPolling();
-  startWebhookRelay({ client, guildId: GUILD_ID, channelId: ANNOUNCEMENT_CHANNEL_ID, websiteUrl: WEBSITE_URL, secret: WEBHOOK_SECRET, path: WEBHOOK_PATH, port: BOT_HTTP_PORT, mentionRoleId: ANNOUNCEMENT_ROLE_ID, mentionEvents: BOT_MENTION_EVENTS, defaultAuthor: ANNOUNCEMENT_AUTHOR, logAction });
+  startBotPresencePolling();
+  startWebhookRelay({ client, guildId: GUILD_ID, channelId: ANNOUNCEMENT_CHANNEL_ID, websiteUrl: WEBSITE_URL, secret: WEBHOOK_SECRET, path: WEBHOOK_PATH, port: BOT_HTTP_PORT, mentionRoleId: ANNOUNCEMENT_ROLE_ID, mentionEvents: BOT_MENTION_EVENTS, defaultAuthor: ANNOUNCEMENT_AUTHOR, supportsBotPresence: Boolean(BOT_API_SECRET), logAction });
   registerCommands().catch(error => { console.error("Command registration failed", error); process.exitCode = 1; });
 });
 client.on("guildMemberAdd", member => {

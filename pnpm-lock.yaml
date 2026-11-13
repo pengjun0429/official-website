@@ -162,10 +162,6 @@ importers:
         version: 4.149.0(@cloudflare/workers-types@4.20260702.1)
 
   artifacts/fumo-website:
-    dependencies:
-      '@discord/embedded-app-sdk':
-        specifier: ^2.5.0
-        version: 2.5.0
     devDependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0
@@ -4472,33 +4468,6 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-
-  '@discord/embedded-app-sdk@2.5.0':
-    resolution: {integrity: sha512-FNoe5PbSkoKEbqPubaBmq6tlEMOftMjR3gu55YrdrrKmBfKKM4i9P/Z+Zxl0RZdJcKviBwVcTyYMMPM/aGex/w==}
-
-  '@types/lodash.transform@4.6.9':
-    resolution: {integrity: sha512-1iIn+l7Vrj8hsr2iZLtxRkcV9AtjTafIyxKO9DX2EEcdOgz3Op5dhwKQFhMJgdfIRbYHBUF+SU97Y6P+zyLXNg==}
-
-  '@types/lodash@4.17.27':
-    resolution: {integrity: sha512-VenMRv/eKNrspX9v3H4dbmjsrnCOYdYBG3kxXKk3dG6X+urBGcj2Prww3xw1U5K4FV/mE4h5GbWd0szEKf+9ew==}
-
-  '@types/uuid@10.0.0':
-    resolution: {integrity: sha512-7gqG38EyHgyP1S+7+xomFtL+ZNHcKv6DwNaCZmJmo1vgMugyF3TCnXVg4t1uk89mLNwnLtnY3TpOpCOyp1/xHQ==}
-
-  big-integer@1.6.52:
-    resolution: {integrity: sha512-QxD8cf2eVqJOOz63z6JIN9BzvVs/dlySa5HGSBH5xtR8dPteIRQnBxxKqkNTiT6jbDTF6jAfrd4oMcND9RGbQg==}
-    engines: {node: '>=0.6'}
-
-  eventemitter3@5.0.4:
-    resolution: {integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==}
-
-  lodash.transform@4.6.0:
-    resolution: {integrity: sha512-LO37ZnhmBVx0GvOU/caQuipEh4GN82TcWv3yHlebGDgOxbxiwwzW5Pcx2AcvpIv2WmvmSMoC492yQFNhy/l/UQ==}
-
-  uuid@11.1.1:
-    resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
-    hasBin: true
-
 snapshots:
 
   '@babel/code-frame@7.29.0':
@@ -8021,30 +7990,3 @@ snapshots:
       youch-core: 0.3.3
 
   zod@3.25.76: {}
-
-  '@discord/embedded-app-sdk@2.5.0':
-    dependencies:
-      '@types/lodash.transform': 4.6.9
-      '@types/uuid': 10.0.0
-      big-integer: 1.6.52
-      decimal.js-light: 2.5.1
-      eventemitter3: 5.0.4
-      lodash.transform: 4.6.0
-      uuid: 11.1.1
-      zod: 3.25.76
-
-  '@types/lodash.transform@4.6.9':
-    dependencies:
-      '@types/lodash': 4.17.27
-
-  '@types/lodash@4.17.27': {}
-
-  '@types/uuid@10.0.0': {}
-
-  big-integer@1.6.52: {}
-
-  eventemitter3@5.0.4: {}
-
-  lodash.transform@4.6.0: {}
-
-  uuid@11.1.1: {}

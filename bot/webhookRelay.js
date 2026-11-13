@@ -56,12 +56,12 @@ function buildEmbed(payload, event, websiteUrl) {
   };
 }
 
-export function startWebhookRelay({ client, guildId, channelId, websiteUrl, secret, path, port, mentionRoleId, mentionEvents, defaultAuthor, logAction = () => {} }) {
+export function startWebhookRelay({ client, guildId, channelId, websiteUrl, secret, path, port, mentionRoleId, mentionEvents, defaultAuthor, supportsBotPresence = false, logAction = () => {} }) {
   const events = new Set(mentionEvents);
   const server = createServer(async (request, response) => {
     if (request.method === "GET" && request.url === "/healthz") {
       response.writeHead(200, { "Content-Type": "application/json" });
-      response.end(JSON.stringify({ ok: true, bot: client.isReady(), features: { announcementText: true } }));
+      response.end(JSON.stringify({ ok: true, bot: client.isReady(), features: { announcementText: true, botPresence: supportsBotPresence } }));
       return;
     }
     if (request.method === "GET" && request.url === "/channels") {

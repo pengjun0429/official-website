@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { BotActivityEditor } from "@/components/BotActivityEditor";
+import { BotPresenceEditor } from "@/components/BotPresenceEditor";
 import "./css/styles.css";
 
 export default function BotAdmin() {
@@ -65,7 +65,7 @@ export default function BotAdmin() {
   return <div className="min-h-screen bg-muted/20 py-10"><div className="container mx-auto max-w-4xl space-y-6 px-4">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="flex items-center gap-2 text-2xl font-bold text-primary"><Bot className="h-6 w-6" />Discord Bot 管理後台</h1><p className="mt-1 text-sm text-muted-foreground">使用 FUMO 官方機器人發佈 Discord 公告。</p></div><Button variant="outline" onClick={() => { channels.refetch(); roles.refetch(); status.refetch(); }}><RefreshCw className="mr-2 h-4 w-4" />重新整理</Button></div>
     <Card><CardContent className="flex flex-wrap items-center gap-3 pt-6 text-sm"><span className={`h-2.5 w-2.5 rounded-full ${status.data?.bot ? "bg-green-500" : "bg-red-500"}`} /><span>Bot 狀態：{status.isLoading ? "檢查中" : status.data?.bot ? "線上" : "離線"}</span><span className="text-muted-foreground">可用頻道：{channelOptions.length}</span><span className="text-muted-foreground">可選身分組：{roleOptions.length}</span>{status.error && <span className="text-red-600">{status.error.message}</span>}</CardContent></Card>
-    <BotActivityEditor />
+    <BotPresenceEditor apiSupportsPresence={status.data?.apiFeatures?.botPresence === true} runtimeSupportsPresence={status.data?.features?.botPresence === true} />
     <Card><CardHeader><CardTitle className="flex items-center gap-2"><Megaphone className="h-5 w-5" />發布公告</CardTitle></CardHeader><CardContent className="space-y-4">
       <label className="block text-sm font-medium">Discord 頻道<select className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={channelId} onChange={event => setChannelId(event.target.value)}><option value="">請選擇頻道</option>{channelOptions.map(channel => <option key={channel.id} value={channel.id}>#{channel.name}</option>)}</select></label>
       <label className="block text-sm font-medium">公告格式<select className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={announcementMode} onChange={event => setAnnouncementMode(event.target.value as BotAnnouncementMode)}><option value="embed">視覺化 Embed（原格式）</option><option value="text">純文字訊息</option></select></label>

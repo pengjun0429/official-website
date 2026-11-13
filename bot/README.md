@@ -15,6 +15,7 @@
 - `/伺服器還原`：只有 Discord Bot 應用程式的擁有者可執行；使用 Bot 本機最新備份，或上傳已下載的 JSON。顯示預覽並再次確認後才建立架構
 - 網站 Webhook relay：接收網站簽名事件，再由 Bot 發送 Discord Embed
 - 網站 `/bot-admin`：管理員可選擇沿用 Embed 公告，或改用純文字訊息；每則網站公告可獨立多選要提及的身分組，未選取的角色不會被允許提及
+- 網站 `/bot-admin`：管理員可設定 Bot 活動類型與狀態文字；Bot 透過 Worker 的 bearer 保護 API 每 30 秒同步一次，留空文字可清除活動
 
 `/國家查詢` 以 `/api/members` 讀取國家名稱、簡稱、代號、政體、領袖與會員狀態，並以 `/api/voters` 讀取公開代表姓名。代表資料只顯示姓名，絕不輸出 Discord ID；國家連結指向共用的 `FUMO_WEBSITE_URL/members` 名錄頁，因現有 API 未提供各國專屬網址。
 
@@ -66,6 +67,8 @@ npm start
 選擇 Node.js Docker image，將 `bot/` 目錄內容上傳到伺服器根目錄，或使用 Wispbyte GitHub Integration 拉取 repo 後把工作目錄指到 `bot`。Wispbyte 的 Node.js 伺服器會在有 `package.json` 時安裝依賴。
 
 網站 repo 的 GitHub Actions 目前只有版本標籤觸發的 Release workflow，沒有 Wispbyte Bot 自動部署 workflow。推送 `main` 不代表執行中的 Bot 已更新；除非 Wispbyte 已設定追蹤此 repository/branch 的 GitHub Integration 並自動重啟，否則需要在 Wispbyte 更新 Bot 檔案並重啟。網站 `/bot-admin` 的純文字選項會同時檢查 API Worker 與 `/healthz` 回報的 `features.announcementText`，只有兩者都部署新版後才會啟用。
+
+網站 `/bot-admin` 的 Bot 狀態文字會儲存在 D1；需先套用 API Worker 的 `0017_discord_bot_presence.sql` 並部署 Worker，再更新 Bot runtime。後台會分別檢查 Worker 與 Bot 回報的 presence 支援狀態。
 
 Bot 架構備份檔預設保存在 Wispbyte 執行環境的 `bot/data/server-backups/`。若主機磁碟清除、重建或更換，Bot 本機檔案可能消失；每次 `/伺服器備份` 也會私密回傳 JSON 附件，建議另外下載保存。更換主機時可在新伺服器執行 `/伺服器還原` 並附上該 JSON。
 

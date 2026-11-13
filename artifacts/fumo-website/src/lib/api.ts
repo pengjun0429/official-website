@@ -49,10 +49,31 @@ export async function fetchBotRoles(): Promise<BotRolesResponse> {
   return data;
 }
 
-export async function fetchBotStatus(): Promise<{ ok: boolean; bot: boolean; features?: { announcementText?: boolean }; apiFeatures?: { announcementMode?: boolean } }> {
+export async function fetchBotStatus(): Promise<{ ok: boolean; bot: boolean; features?: { announcementText?: boolean; botPresence?: boolean }; apiFeatures?: { announcementMode?: boolean; botPresence?: boolean } }> {
   const response = await apiFetch("/api/admin/bot/status");
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "無法連線到 Discord Bot。");
+  return data;
+}
+
+export type BotPresenceActivityType = "custom" | "playing" | "watching" | "listening" | "competing";
+export interface BotPresenceSettings {
+  activityType: BotPresenceActivityType;
+  activityText: string;
+  updatedAt: string | null;
+}
+
+export async function fetchBotPresenceSettings(): Promise<BotPresenceSettings> {
+  const response = await apiFetch("/api/admin/bot/presence");
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "無法載入 Bot 狀態設定。");
+  return data;
+}
+
+export async function saveBotPresenceSettings(payload: Pick<BotPresenceSettings, "activityType" | "activityText">): Promise<BotPresenceSettings> {
+  const response = await apiFetch("/api/admin/bot/presence", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Bot 狀態儲存失敗。");
   return data;
 }
 
@@ -61,62 +82,4 @@ export async function sendBotAnnouncement(payload: { channelId: string; mode?: B
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "公告發布失敗。");
   return data;
-}
-
-export interface DiscordActivityContent {
-  title: string;
-  subtitle: string;
-  introduction: string;
-  instructions: string;
-  victoryMessage: string;
-  timeLimitSeconds: number;
-}
-export interface DiscordActivityState {
-  rotations: number[];
-  moves: number;
-  startedAt: string;
-}
-export interface DiscordActivityContentResponse {
-  content: DiscordActivityContent;
-  updatedAt: string | null;
-}
-export interface DiscordActivityInstanceResponse {
-  state: DiscordActivityState;
-  revision: number;
-  updatedAt?: string;
-}
-
-async function activityJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await apiFetch(path, init);
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "無法連線到活動服務。");
-  return data;
-}
-
-export function fetchDiscordActivityContent(): Promise<DiscordActivityContentResponse> {
-  return activityJson("/api/activity/content");
-}
-
-export function saveDiscordActivityContent(content: DiscordActivityContent): Promise<DiscordActivityContentResponse> {
-  return activityJson("/api/admin/bot/activity", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(content),
-  });
-}
-
-export function fetchDiscordActivityInstance(instanceId: string): Promise<DiscordActivityInstanceResponse> {
-  return activityJson(`/api/activity/instances/${encodeURIComponent(instanceId)}`);
-}
-
-export function rotateDiscordActivityPipe(instanceId: string, cellIndex: number): Promise<DiscordActivityInstanceResponse> {
-  return activityJson(`/api/activity/instances/${encodeURIComponent(instanceId)}/rotate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ cellIndex }),
-  });
-}
-
-export function resetDiscordActivity(instanceId: string): Promise<DiscordActivityInstanceResponse> {
-  return activityJson(`/api/activity/instances/${encodeURIComponent(instanceId)}/reset`, { method: "POST" });
 }
