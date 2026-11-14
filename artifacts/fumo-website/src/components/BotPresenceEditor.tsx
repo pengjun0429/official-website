@@ -111,18 +111,18 @@ export function BotPresenceEditor({ apiSupportsPresence, runtimeSupportsPresence
   const allSystemsReady = apiSupportsPresence && runtimeSupportsPresence;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" />Bot 活動輪播</CardTitle>
+    <Card className="fumo-activity-settings">
+      <CardHeader className="fumo-activity-settings__header">
+        <CardTitle className="fumo-activity-settings__title flex items-center gap-2"><Activity className="h-5 w-5" />Bot 活動輪播</CardTitle>
         <p className="text-sm text-muted-foreground">可設定最多 10 組不同類型與文字，Bot 會依序輪播。設定儲存至 FUMO 資料庫，現有 Bot 每 30 秒同步一次。</p>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="fumo-activity-settings__content space-y-4">
         {settingsQuery.isLoading && <p className="text-sm text-muted-foreground">正在載入 Bot 活動設定…</p>}
         {settingsQuery.error && <p className="text-sm text-red-600" role="alert">{settingsQuery.error.message}</p>}
         {form && <>
           <div className="space-y-3">
             {form.activities.map((activity, index) => (
-              <div key={index} className="space-y-3 rounded-md border border-border/70 p-3">
+              <div key={index} className="fumo-activity-settings__activity space-y-3 rounded-md border border-border/70 p-3">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium">第 {index + 1} 組活動</p>
                   <div className="flex shrink-0 items-center gap-1">

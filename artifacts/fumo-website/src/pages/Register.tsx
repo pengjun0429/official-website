@@ -1,32 +1,23 @@
 import { toChineseError } from "@/lib/errorMessage";
 import { useState } from "react";
-import { AlertTriangle, Link2, UserPlus } from "lucide-react";
+import { AlertTriangle, MessageCircle, UserPlus } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { apiFetch, googleOAuthStartUrl } from "@/lib/api";
+import { apiFetch, discordOAuthStartUrl } from "@/lib/api";
 import './css/styles.css'
 
 export default function Register() {
   const { isEnglish } = useLanguage();
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const [voterId, setVoterId] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const query = new URLSearchParams(location.split("?")[1] || "");
-  const googleResult = query.get("google");
-  const googleMessage = googleResult === "email_not_allowed"
-    ? (isEnglish ? "This Google email is not in the registration sheet." : "這個 Google Email 不在註冊名單中。")
-    : googleResult === "not_configured"
-      ? (isEnglish ? "Google sign-in is not configured yet." : "Google 登入尚未完成設定。")
-      : googleResult
-        ? (isEnglish ? "Google registration failed. Please try again." : "Google 註冊失敗，請再試一次。")
-        : null;
 
   const handleIdRegister = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -67,7 +58,7 @@ export default function Register() {
     }
   };
 
-  const startGoogleRegistration = () => window.location.assign(googleOAuthStartUrl("login"));
+  const startDiscordRegistration = () => window.location.assign(discordOAuthStartUrl("login"));
 
   return (
     <div className="min-h-screen bg-muted/20 py-16">
@@ -78,17 +69,23 @@ export default function Register() {
               <UserPlus className="w-6 h-6" />{isEnglish ? "Create a FUMO account" : "註冊 FUMO 帳戶"}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {isEnglish ? "Choose ID and password, or Google. ID registration requires an entry in the official registration list." : "可選擇 ID 與密碼，或使用 Google 註冊；ID 必須已列於官方註冊名單。"}
+              {isEnglish ? "Continue with Discord, or register with an ID and password. Your ID must be listed in the official registration sheet." : "可使用已登記的 Discord 帳戶，或以 ID 與密碼註冊；你的 ID 必須已列於官方註冊名單。"}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {googleMessage && <div className="flex items-start gap-2 text-red-600 bg-red-50 p-3 rounded-md" role="alert"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /><span className="text-sm">{googleMessage}</span></div>}
             {success ? (
               <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-center text-sm text-emerald-800" role="status">
                 {isEnglish ? "ID registration successful. Redirecting you to sign in…" : "ID 註冊成功，正在前往登入頁…"}
               </div>
             ) : (
               <>
+                <Button type="button" variant="outline" onClick={startDiscordRegistration} className="w-full min-h-11 gap-2 Button-solid justify-center">
+                  <MessageCircle className="w-4 h-4" />{isEnglish ? "Continue with Discord" : "使用 Discord 註冊／登入"}
+                </Button>
+                <p className="text-center text-xs text-muted-foreground">
+                  {isEnglish ? "Discord sign-in is available for IDs on the official FUMO registration list." : "Discord ID 必須在 FUMO 官方註冊名單內，才能使用 Discord 登入。"}
+                </p>
+                <div className="relative py-1" aria-hidden="true"><div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div><div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-muted-foreground">{isEnglish ? "OR" : "或"}</span></div></div>
                 <form onSubmit={handleIdRegister} className="space-y-4">
                   <h2 className="text-sm font-semibold">{isEnglish ? "Register with ID and password" : "使用 ID 與密碼註冊"}</h2>
                   <div>
@@ -109,13 +106,7 @@ export default function Register() {
                     {loading ? (isEnglish ? "Creating account…" : "建立帳戶中…") : (isEnglish ? "Register with ID" : "使用 ID 註冊")}
                   </Button>
                 </form>
-                <div className="relative py-1" aria-hidden="true"><div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div><div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-muted-foreground">{isEnglish ? "OR" : "或"}</span></div></div>
-                <div className="space-y-2">
-                  <h2 className="text-sm font-semibold">{isEnglish ? "Register with Google" : "使用 Google 註冊"}</h2>
-                  <p className="text-xs text-muted-foreground">{isEnglish ? "Google registration is available when your email is on the official registration list." : "Google 註冊需使用已列於官方註冊名單的 Email。"}</p>
-                  <Button type="button" variant="outline" onClick={startGoogleRegistration} className="w-full min-h-11 gap-2"><Link2 className="w-4 h-4" />{isEnglish ? "Continue with Google" : "使用 Google 帳戶註冊"}</Button>
-                </div>
-                <p className="text-center text-sm text-muted-foreground">{isEnglish ? "Already have an account?" : "已經有帳戶？"}{" "}<Link href="/login" className="text-primary font-medium hover:underline">{isEnglish ? "Sign in with ID or Google" : "使用 ID 或 Google 登入"}</Link></p>
+                <p className="text-center text-sm text-muted-foreground">{isEnglish ? "Already have an account?" : "已經有帳戶？"}{" "}<Link href="/login" className="text-primary font-medium hover:underline">{isEnglish ? "Sign in with Discord or ID and password" : "使用 Discord 或 ID／密碼登入"}</Link></p>
               </>
             )}
           </CardContent>

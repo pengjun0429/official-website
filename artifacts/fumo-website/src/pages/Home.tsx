@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import {
   ArrowDown,
   ArrowUpRight,
-  Link2,
+  MessageCircle,
   LogIn,
   LogOut,
   Menu,
@@ -14,7 +14,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { googleOAuthStartUrl } from "@/lib/api";
+import { discordOAuthStartUrl } from "@/lib/api";
 import { SiteFooter } from "@/components/SiteFooter";
 import { getSiteNavigationLinks } from "@/data/siteNavigation";
 import "./Home.css";
@@ -96,7 +96,7 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const text = (zh: string, en: string) => (isEnglish ? en : zh);
   const closeMenu = () => setMenuOpen(false);
-  const connectGoogle = () => window.location.assign(googleOAuthStartUrl("link"));
+  const connectDiscord = () => window.location.assign(discordOAuthStartUrl("link"));
   const documentsUrl = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/documents/`;
   const topNavLinks = getSiteNavigationLinks(isEnglish);
 
@@ -124,7 +124,7 @@ export default function Home() {
               <div className="fumo-account-actions">
                 {isAdmin && <Link className="fumo-account-link" href="/admin" aria-label={text("管理員入口", "Admin panel")}><Shield size={14} />{text("管理", "Admin")}</Link>}
                 <span className="fumo-user-name">{user.voterName}</span>
-                <button className="fumo-account-link" type="button" onClick={connectGoogle} aria-label={text("連接 Google", "Connect Google")}><Link2 size={14} />{text("連接 Google", "Connect Google")}</button>
+                <button className="fumo-account-link" type="button" onClick={connectDiscord} aria-label={text("連結 Discord", "Connect Discord")}><MessageCircle size={14} />{text("連結 Discord", "Connect Discord")}</button>
                 <button className="fumo-account-link" type="button" onClick={logout}><LogOut size={14} />{text("登出", "Sign out")}</button>
               </div>
             ) : (
@@ -154,7 +154,7 @@ export default function Home() {
           {user && (
             <div className="fumo-mobile-account">
               {isAdmin && <Link href="/admin" onClick={closeMenu}><Shield size={14} />{text("管理員入口", "Admin panel")}</Link>}
-              <button type="button" onClick={() => { closeMenu(); connectGoogle(); }}><Link2 size={14} />{text("連接 Google", "Connect Google")}</button>
+              <button type="button" onClick={() => { closeMenu(); connectDiscord(); }}><MessageCircle size={14} />{text("連結 Discord", "Connect Discord")}</button>
               <button type="button" onClick={() => { closeMenu(); logout(); }}><LogOut size={14} />{text("登出", "Sign out")}</button>
             </div>
           )}

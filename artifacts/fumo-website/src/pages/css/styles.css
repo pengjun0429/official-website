@@ -61,6 +61,99 @@
     @apply bg-white rounded-lg shadow-sm border border-border/60 overflow-hidden p-5 sm:p-8 lg:p-12 prose prose-slate max-w-none prose-headings:text-primary prose-h1:text-center prose-h1:text-3xl prose-h2:border-l-4 prose-h2:border-secondary prose-h2:pl-4 prose-h2:py-1 prose-h2:mt-12 prose-h3:text-xl prose-h3:mt-8 prose-p:leading-8 prose-blockquote:border-secondary prose-blockquote:bg-muted/40 prose-blockquote:rounded-r-md prose-table:text-sm
 }
 
+/* Activity settings use an explicit editorial treatment instead of relying only on utility classes. */
+.fumo-route-body .fumo-activity-settings {
+    --activity-ink: #1d1d1f;
+    --activity-muted: #6e6e73;
+    --activity-line: #d2d2d7;
+    --activity-blue: #00334d;
+    border: 0 !important;
+    border-top: 1px solid var(--activity-line) !important;
+    border-bottom: 1px solid var(--activity-line) !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: var(--activity-ink);
+    box-shadow: none !important;
+}
+
+.fumo-route-body .fumo-activity-settings__header {
+    gap: 8px;
+    padding: 20px 0 14px;
+    border-bottom: 1px solid var(--activity-line);
+}
+
+.fumo-route-body .fumo-activity-settings__title {
+    color: var(--activity-ink) !important;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -.025em;
+}
+
+.fumo-route-body .fumo-activity-settings__header p,
+.fumo-route-body .fumo-activity-settings .text-muted-foreground {
+    color: var(--activity-muted) !important;
+}
+
+.fumo-route-body .fumo-activity-settings__content {
+    padding: 16px 0 20px;
+}
+
+.fumo-route-body .fumo-activity-settings__activity {
+    border: 0 !important;
+    border-bottom: 1px solid var(--activity-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    padding: 16px 0 !important;
+}
+
+.fumo-route-body .fumo-activity-settings label {
+    color: var(--activity-ink);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.fumo-route-body .fumo-activity-settings select,
+.fumo-route-body .fumo-activity-settings input:not([type="checkbox"]):not([type="radio"]) {
+    min-height: 40px;
+    border-color: var(--activity-line) !important;
+    border-radius: 3px !important;
+    background: #fff !important;
+    color: var(--activity-ink) !important;
+    font: inherit;
+    font-size: 14px;
+    box-shadow: none !important;
+}
+
+.fumo-route-body .fumo-activity-settings :is(select, input, button):focus-visible {
+    outline: 2px solid rgba(0, 51, 77, .45) !important;
+    outline-offset: 2px;
+}
+
+.fumo-route-body .fumo-activity-settings :is(select, input):focus {
+    border-color: var(--activity-blue) !important;
+}
+
+html.dark .fumo-route-body .fumo-activity-settings {
+    --activity-ink: #eceef0;
+    --activity-muted: #a2a7ae;
+    --activity-line: #363a40;
+    --activity-blue: #7fb6ca;
+    color-scheme: dark;
+    border-color: var(--activity-line) !important;
+    background: #17191c !important;
+}
+
+html.dark .fumo-route-body .fumo-activity-settings select,
+html.dark .fumo-route-body .fumo-activity-settings input:not([type="checkbox"]):not([type="radio"]) {
+    border-color: var(--activity-line) !important;
+    background: #202328 !important;
+    color: var(--activity-ink) !important;
+}
+
+html.dark .fumo-route-body .fumo-activity-settings :is(select, input, button):focus-visible {
+    outline-color: rgba(127, 182, 202, .7) !important;
+}
+
 html.dark .fumo-admin-page .Div-base {
     background-color: #202328 !important;
     border-color: #363a40 !important;
