@@ -7,7 +7,7 @@ import { deliverWebhook, dispatchVoteEvent, DISCORD_ROLE_ID, normalizeDiscordRol
 import { canEditVoteDraft, validateVoteDraftFields } from "./voteDrafts";
 import { hasValidBotBearerToken, storedUtcInstantToIso } from "./botVoteAnnouncements";
 import { botAnnouncementSchema } from "./botAnnouncementSchema";
-import { botPresenceSchema, DEFAULT_BOT_PRESENCE } from "./botPresence";
+import { botPresenceSchema, parseStoredBotPresence, selectBotPresenceActivity, serializeBotPresence } from "./botPresence";
 interface Env {
   DB: D1Database;
   CORS_ORIGIN?: string;
@@ -972,15 +972,19 @@ async function requireAdmin(db: D1Database, voterId: string, level: number) { co
 async function readBotPresence(db: D1Database) {
   const row = await db.prepare("SELECT activity_type, activity_text, updated_at FROM discord_bot_presence_settings WHERE id = 1")
     .first<{ activity_type: string; activity_text: string; updated_at: string }>();
+  const config = parseStoredBotPresence(row?.activity_type ?? "playing", row?.activity_text ?? "");
   return {
-    activityType: row?.activity_type ?? DEFAULT_BOT_PRESENCE.activityType,
-    activityText: row?.activity_text ?? DEFAULT_BOT_PRESENCE.activityText,
+    ...config,
+    activityType: config.activities[0]?.activityType ?? "playing",
+    activityText: config.activities[0]?.activityText ?? "",
     updatedAt: row?.updated_at ?? null,
   };
 }
 app.get("/api/internal/bot/presence", async c => {
   if (!hasValidBotBearerToken(c.env.FUMO_BOT_API_SECRET, c.req.header("Authorization"))) return c.json({ error: "Unauthorized" }, 401);
-  return c.json(await readBotPresence(c.env.DB), 200, { "Cache-Control": "no-store" });
+  const settings = await readBotPresence(c.env.DB);
+  const activity = selectBotPresenceActivity(settings, settings.updatedAt);
+  return c.json(activity, 200, { "Cache-Control": "no-store" });
 });
 app.get("/api/admin/bot/status", async c => {
   const actor = await currentAccount(c);
@@ -998,12 +1002,14 @@ app.patch("/api/admin/bot/presence", async c => {
   const actor = await currentAccount(c);
   if (!actor || actor.admin_level < ADMIN_TIER1) return c.json({ error: "管理員權限不足。" }, 403);
   const body = botPresenceSchema.safeParse(await parseJson(c));
-  if (!body.success) return c.json({ error: "Bot 狀態格式不正確；活動文字須為單行且不超過 128 字元。", details: body.error.issues }, 400);
+  if (!body.success) return c.json({ error: "Bot 活動設定格式不正確；請確認活動文字、活動數量及輪播間隔。", details: body.error.issues }, 400);
   const settings = body.data;
+  const firstActivity = settings.activities[0] ?? { activityType: "playing", activityText: "" };
+  const storedActivities = serializeBotPresence(settings);
   await c.env.DB.batch([
     c.env.DB.prepare("INSERT INTO discord_bot_presence_settings (id, activity_type, activity_text, updated_by, updated_by_name, updated_at) VALUES (1, ?, ?, ?, ?, datetime('now')) ON CONFLICT(id) DO UPDATE SET activity_type = excluded.activity_type, activity_text = excluded.activity_text, updated_by = excluded.updated_by, updated_by_name = excluded.updated_by_name, updated_at = datetime('now')")
-      .bind(settings.activityType, settings.activityText, actor.voter_id, actor.voter_name),
-    auditStatement(c.env.DB, actor, "discord.bot_presence_updated", "discord_bot_presence", "default", { activityType: settings.activityType, textLength: settings.activityText.length }),
+      .bind(firstActivity.activityType, storedActivities, actor.voter_id, actor.voter_name),
+    auditStatement(c.env.DB, actor, "discord.bot_presence_updated", "discord_bot_presence", "default", { activityCount: settings.activities.length, rotationIntervalSeconds: settings.rotationIntervalSeconds }),
   ]);
   return c.json(await readBotPresence(c.env.DB), 200, { "Cache-Control": "no-store" });
 });

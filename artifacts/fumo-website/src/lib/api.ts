@@ -56,10 +56,16 @@ export async function fetchBotStatus(): Promise<{ ok: boolean; bot: boolean; fea
   return data;
 }
 
-export type BotPresenceActivityType = "custom" | "playing" | "watching" | "listening" | "competing";
+export type BotPresenceActivityType = "playing" | "watching" | "listening" | "competing";
+export interface BotPresenceActivity {
+  activityType: BotPresenceActivityType;
+  activityText: string;
+}
 export interface BotPresenceSettings {
   activityType: BotPresenceActivityType;
   activityText: string;
+  activities: BotPresenceActivity[];
+  rotationIntervalSeconds: number;
   updatedAt: string | null;
 }
 
@@ -70,7 +76,7 @@ export async function fetchBotPresenceSettings(): Promise<BotPresenceSettings> {
   return data;
 }
 
-export async function saveBotPresenceSettings(payload: Pick<BotPresenceSettings, "activityType" | "activityText">): Promise<BotPresenceSettings> {
+export async function saveBotPresenceSettings(payload: Pick<BotPresenceSettings, "activities" | "rotationIntervalSeconds">): Promise<BotPresenceSettings> {
   const response = await apiFetch("/api/admin/bot/presence", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "Bot 狀態儲存失敗。");
