@@ -125,7 +125,7 @@
 
 .fumo-join { padding: clamp(60px, 8vw, 102px) 0; background: var(--fumo-ink); color: #f5f5f7; }
 .fumo-join-grid { display: grid; grid-template-columns: minmax(180px, .58fr) 1fr; gap: 46px; }
-.fumo-join .fumo-section-index { color: #a1a1a6; }
+.fumo-join .fumo-section-index { color: #c5c5ca; }
 .fumo-join h2 { max-width: 700px; }
 .fumo-join p:not(.fumo-section-index) { max-width: 650px; margin: 18px 0 0; color: #c5c5ca; font-size: 16px; }
 .fumo-join .fumo-hero-links { margin-top: 27px; }
