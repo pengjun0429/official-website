@@ -191,7 +191,7 @@ export function BotPresenceEditor({ apiSupportsPresence, runtimeSupportsPresence
                 {activity.activityState && !isValidActivityState(activity.activityState) && <p className="text-xs text-red-600" role="alert">活動狀態必須是單行文字，且最多 128 字元。</p>}
               </div>
             ))}
-            {form.activities.length === 0 && <p className="text-sm text-muted-foreground">目前沒有活動；儲存後會清除 Bot 的活動狀態。</p>}
+            {form.activities.length === 0 && <p className="text-sm text-muted-foreground">目前沒有手動活動；有進行中的投票時 Bot 會顯示「正在遊玩：投票中」，投票結束後則不顯示活動。</p>}
           </div>
 
           <Button type="button" variant="outline" onClick={() => {
@@ -207,6 +207,7 @@ export function BotPresenceEditor({ apiSupportsPresence, runtimeSupportsPresence
             <Input className="mt-1 max-w-40" type="number" min={30} max={600} step={30} value={form.rotationIntervalSeconds} onChange={event => updateRotationInterval(Number(event.target.value))} />
           </label>
         <p className="text-xs text-muted-foreground">間隔可設 30–600 秒，且須為 30 秒倍數。Bot 每 30 秒同步一次；多組活動會依列表順序輪播。所有活動都會顯示在 Discord 的同一活動欄，例如「正在遊玩…」，不會使用獨立的 Custom Status 欄位。</p>
+          <p className="text-xs text-muted-foreground">手動設定優先：只要清單中有活動，Bot 就會依設定輪播，不會被自動投票狀態覆寫。清單為空時，若有已發布、已開始、未關閉且未逾期的投票，才會顯示「正在遊玩：投票中」；投票結束後回到空白狀態。</p>
           <p className="text-xs text-muted-foreground">最後儲存：{formatSavedAt(savedAt)}</p>
           {!allSystemsReady && <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900" role="status">目前網站 API 或執行中的 Bot 尚未回報活動同步支援；需完成 API Worker 更新後，多組活動與輪播設定才會顯示在 Discord。</div>}
           {notice && <div className={`flex items-start gap-2 rounded-md border p-3 text-sm ${notice.ok ? "border-green-200 bg-green-50 text-green-800" : "border-red-200 bg-red-50 text-red-700"}`} role={notice.ok ? "status" : "alert"}>{notice.ok && <CheckCircle2 className="h-4 w-4 shrink-0" />}{notice.text}</div>}

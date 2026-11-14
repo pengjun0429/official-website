@@ -40,3 +40,11 @@ export function buildBotPresenceOptions(activity, activityTypes) {
   if (activity.activityType === "streaming") options.url = activity.activityUrl.trim();
   return options;
 }
+
+export function resolveBotPresenceActivity(manualActivity, voteActive) {
+  if (typeof manualActivity?.activityText === "string" && manualActivity.activityText.trim()) {
+    return { ...manualActivity, activityText: manualActivity.activityText.trim() };
+  }
+  if (voteActive) return { activityType: "playing", activityText: "投票中" };
+  return { activityType: "playing", activityText: "" };
+}

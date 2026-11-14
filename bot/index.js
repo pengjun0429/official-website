@@ -5,7 +5,7 @@ import { startWebhookRelay } from "./webhookRelay.js";
 import { processDueVoteAnnouncements, voteAnnouncementMarker } from "./voteAnnouncements.js";
 import { buildVoteAnnouncementRoleOptions, getVoteAnnouncementConfig } from "./voteAnnouncementConfig.js";
 import { extractApplicationOwnerId, isBotOwner } from "./ownerAuth.js";
-import { buildBotPresenceOptions, isValidBotPresenceActivity } from "./presence.js";
+import { buildBotPresenceOptions, isValidBotPresenceActivity, resolveBotPresenceActivity } from "./presence.js";
 import {
   createGuildBackup,
   getBackupDirectory,
@@ -287,21 +287,35 @@ async function pollBotPresence() {
     const activityText = typeof settings.activityText === "string" ? settings.activityText.trim() : null;
     const activityState = settings.activityState === undefined ? "" : settings.activityState;
     const activityUrl = typeof settings.activityUrl === "string" ? settings.activityUrl.trim() : "";
+    if (settings.voteActive !== undefined && typeof settings.voteActive !== "boolean") {
+      throw new Error("Worker returned invalid active vote status");
+    }
     if (activityText === null || typeof activityState !== "string"
       || !isValidBotPresenceActivity({ activityType, activityText, activityState, activityUrl }, BOT_PRESENCE_ACTIVITY_TYPES)) {
       throw new Error("Worker returned invalid Bot presence settings");
     }
-    const presenceKey = JSON.stringify([activityType, activityText, activityState, activityUrl]);
+    const manualActivity = { activityType, activityText, activityState, activityUrl };
+    const effectiveActivity = resolveBotPresenceActivity(manualActivity, settings.voteActive === true);
+    const effectiveActivityType = effectiveActivity.activityType;
+    const effectiveActivityText = effectiveActivity.activityText;
+    const effectiveActivityState = effectiveActivity.activityState || "";
+    const effectiveActivityUrl = effectiveActivity.activityUrl || "";
+    const presenceKey = JSON.stringify([effectiveActivityType, effectiveActivityText, effectiveActivityState, effectiveActivityUrl]);
     if (presenceKey === lastAppliedBotPresence) return;
-    if (activityText && activityType === "custom") {
-      client.user.setPresence({ activities: [{ name: "Custom Status", type: ActivityType.Custom, state: activityText }] });
-    } else if (activityText) {
-      client.user.setActivity(activityText, buildBotPresenceOptions({ activityType, activityState, activityUrl }, BOT_PRESENCE_ACTIVITY_TYPES));
+    if (effectiveActivityText && effectiveActivityType === "custom") {
+      client.user.setPresence({ activities: [{ name: "Custom Status", type: ActivityType.Custom, state: effectiveActivityText }] });
+    } else if (effectiveActivityText) {
+      client.user.setActivity(effectiveActivityText, buildBotPresenceOptions({ activityType: effectiveActivityType, activityState: effectiveActivityState, activityUrl: effectiveActivityUrl }, BOT_PRESENCE_ACTIVITY_TYPES));
     } else {
       client.user.setPresence({ activities: [] });
     }
     lastAppliedBotPresence = presenceKey;
-    logAction("bot.presence.updated", { activityType, enabled: Boolean(activityText), textLength: activityText.length });
+    logAction("bot.presence.updated", {
+      activityType: effectiveActivityType,
+      source: activityText ? "manual" : settings.voteActive ? "vote" : "none",
+      enabled: Boolean(effectiveActivityText),
+      textLength: effectiveActivityText.length,
+    });
   } catch (error) {
     console.error("Bot presence sync failed", error?.message || error);
   } finally {

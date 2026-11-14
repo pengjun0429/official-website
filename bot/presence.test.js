@@ -4,6 +4,7 @@ import {
   buildBotPresenceOptions,
   isSupportedStreamingUrl,
   isValidBotPresenceActivity,
+  resolveBotPresenceActivity,
 } from "./presence.js";
 
 const activityTypes = {
@@ -74,4 +75,24 @@ test("maps every existing activity type and carries state and Streaming URL to D
     state: "正在準備資料",
   });
   assert.deepEqual(buildBotPresenceOptions({ activityType: "playing", activityState: "  " }, activityTypes), { type: 0 });
+});
+
+test("keeps configured manual activity ahead of the automatic vote fallback", () => {
+  const manualActivity = {
+    activityType: "watching",
+    activityText: "FUMO 官方網站",
+    activityState: "手動輪播狀態",
+  };
+  assert.deepEqual(resolveBotPresenceActivity(manualActivity, true), manualActivity);
+});
+
+test("shows Playing 投票中 only when no manual activity is configured, then clears it after voting", () => {
+  assert.deepEqual(resolveBotPresenceActivity({ activityType: "playing", activityText: "" }, true), {
+    activityType: "playing",
+    activityText: "投票中",
+  });
+  assert.deepEqual(resolveBotPresenceActivity({ activityType: "playing", activityText: "" }, false), {
+    activityType: "playing",
+    activityText: "",
+  });
 });

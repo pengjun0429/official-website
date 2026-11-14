@@ -1004,7 +1004,16 @@ app.get("/api/internal/bot/presence", async c => {
   if (!hasValidBotBearerToken(c.env.FUMO_BOT_API_SECRET, c.req.header("Authorization"))) return c.json({ error: "Unauthorized" }, 401);
   const settings = await readBotPresence(c.env.DB);
   const activity = selectBotPresenceActivity(settings, settings.updatedAt);
-  return c.json(activity, 200, { "Cache-Control": "no-store" });
+  const activeVote = await c.env.DB.prepare(`
+    SELECT 1 AS active
+    FROM votes
+    WHERE is_published = 1
+      AND is_closed = 0
+      AND datetime(deadline) > datetime('now')
+      AND (starts_at IS NULL OR datetime(starts_at) <= datetime('now'))
+    LIMIT 1
+  `).first<{ active: number }>();
+  return c.json({ ...activity, voteActive: Boolean(activeVote) }, 200, { "Cache-Control": "no-store" });
 });
 app.get("/api/admin/bot/status", async c => {
   const actor = await currentAccount(c);
