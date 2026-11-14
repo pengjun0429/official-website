@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { BotPresenceEditor } from "@/components/BotPresenceEditor";
 import "./css/styles.css";
 
+const DEFAULT_ANNOUNCEMENT_AUTHOR = "FUMO 官方網站 Bot";
+
 export default function BotAdmin() {
   const { user, isAdmin } = useAuth();
   const [channelId, setChannelId] = useState("");
@@ -29,6 +31,7 @@ export default function BotAdmin() {
     setNotice(null);
     const cleanTitle = title.trim();
     const cleanContent = content.trim();
+    const cleanAuthor = author.trim();
     if (!channelId || !cleanContent || (announcementMode === "embed" && !cleanTitle)) {
       setNotice({ ok: false, text: announcementMode === "embed" ? "請選擇頻道並填寫公告標題與內容。" : "請選擇頻道並填寫公告內容。" });
       return;
@@ -38,13 +41,13 @@ export default function BotAdmin() {
       return;
     }
     const roleMentions = selectedRoleIds.map(roleId => `<@&${roleId}>`).join(" ");
-    const plainText = [roleMentions, cleanTitle, cleanContent].filter(Boolean).join("\n\n");
+    const plainText = [roleMentions, cleanTitle ? `# 📢 ${cleanTitle}` : "", `發布者：${cleanAuthor || DEFAULT_ANNOUNCEMENT_AUTHOR}`, cleanContent].filter(Boolean).join("\n\n");
     if (announcementMode === "text" && plainText.length > 2000) {
       setNotice({ ok: false, text: "純文字公告超過 Discord 的 2,000 字元限制，請縮短標題、內容或提及設定。" });
       return;
     }
     try {
-      const result = await sendBotAnnouncement({ channelId, mode: announcementMode, title: cleanTitle, content: cleanContent, roleIds: selectedRoleIds, author: author.trim() });
+      const result = await sendBotAnnouncement({ channelId, mode: announcementMode, title: cleanTitle, content: cleanContent, roleIds: selectedRoleIds, author: cleanAuthor });
       setNotice({ ok: true, text: result.messageUrl ? `公告已發布：${result.messageUrl}` : "公告已發布。" });
       setTitle("");
       setContent("");
@@ -61,7 +64,7 @@ export default function BotAdmin() {
   const channelOptions = channels.data?.channels ?? [];
   const roleOptions = roles.data?.roles ?? [];
   const selectedRoles = roleOptions.filter(role => selectedRoleIds.includes(role.id));
-  const plainTextPreview = [selectedRoleIds.map(roleId => `<@&${roleId}>`).join(" "), title.trim(), content.trim()].filter(Boolean).join("\n\n");
+  const previewAuthor = author.trim() || DEFAULT_ANNOUNCEMENT_AUTHOR;
   return <div className="min-h-screen bg-muted/20 py-10"><div className="container mx-auto max-w-4xl space-y-6 px-4">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="flex items-center gap-2 text-2xl font-bold text-primary"><Bot className="h-6 w-6" />Discord Bot 管理後台</h1><p className="mt-1 text-sm text-muted-foreground">使用 FUMO 官方機器人發佈 Discord 公告。</p></div><Button variant="outline" onClick={() => { channels.refetch(); roles.refetch(); status.refetch(); }}><RefreshCw className="mr-2 h-4 w-4" />重新整理</Button></div>
     <Card><CardContent className="flex flex-wrap items-center gap-3 pt-6 text-sm"><span className={`h-2.5 w-2.5 rounded-full ${status.data?.bot ? "bg-green-500" : "bg-red-500"}`} /><span>Bot 狀態：{status.isLoading ? "檢查中" : status.data?.bot ? "線上" : "離線"}</span><span className="text-muted-foreground">可用頻道：{channelOptions.length}</span><span className="text-muted-foreground">可選身分組：{roleOptions.length}</span>{status.error && <span className="text-red-600">{status.error.message}</span>}</CardContent></Card>
@@ -81,11 +84,12 @@ export default function BotAdmin() {
         )}
         <p className="text-xs text-muted-foreground">已選 {selectedRoleIds.length} 個身分組；留空則不提及任何身分組。</p>
       </fieldset>
-      {announcementMode === "embed" && <label className="block text-sm font-medium">發布者顯示名稱<Input className="mt-1" maxLength={80} value={author} onChange={event => setAuthor(event.target.value)} placeholder="FUMO 官方網站 Bot" /></label>}
+      <label className="block text-sm font-medium">發布者顯示名稱<Input className="mt-1" maxLength={80} value={author} onChange={event => setAuthor(event.target.value)} placeholder="FUMO 官方網站 Bot" /></label>
+      <p className="-mt-3 text-xs text-muted-foreground">只顯示此處設定的名稱，不會顯示操作管理員的帳號；留白時使用 Bot 預設名稱。</p>
       {announcementMode === "embed" ? (
-        <div className="rounded-md border bg-muted/30 p-4"><p className="mb-2 text-xs font-semibold text-muted-foreground">Embed 預覽</p><p className="font-semibold">📢 {title || "公告標題"}</p><p className="mt-2 whitespace-pre-wrap text-sm">{content || "公告內容預覽"}</p><p className="mt-3 text-xs text-muted-foreground">{selectedRoles.length ? `提及：${selectedRoles.map(role => `@${role.name}`).join("、")}` : "本公告不提及身分組"}</p></div>
+        <div className="rounded-md border bg-muted/30 p-4"><p className="mb-2 text-xs font-semibold text-muted-foreground">Embed 預覽</p><p className="font-semibold">📢 {title || "公告標題"}</p><p className="mt-1 text-xs text-muted-foreground">發布者：{previewAuthor}</p><p className="mt-2 whitespace-pre-wrap text-sm">{content || "公告內容預覽"}</p><p className="mt-3 text-xs text-muted-foreground">{selectedRoles.length ? `提及：${selectedRoles.map(role => `@${role.name}`).join("、")}` : "本公告不提及身分組"}</p></div>
       ) : (
-        <div className="rounded-md border bg-muted/30 p-4"><p className="mb-2 text-xs font-semibold text-muted-foreground">純文字預覽</p><p className="whitespace-pre-wrap break-words text-sm">{plainTextPreview || "公告內容預覽"}</p></div>
+        <div className="rounded-md border bg-muted/30 p-4"><p className="mb-2 text-xs font-semibold text-muted-foreground">純文字預覽</p>{selectedRoles.length > 0 && <p className="text-sm">提及：{selectedRoles.map(role => `@${role.name}`).join("、")}</p>}<p className="mt-2 text-lg font-semibold">📢 {title.trim() || "公告標題（未設定時不會顯示）"}</p><p className="mt-1 text-xs text-muted-foreground">發布者：{previewAuthor}</p><p className="mt-2 whitespace-pre-wrap break-words text-sm">{content.trim() || "公告內容預覽"}</p></div>
       )}
       {announcementMode === "text" && !status.isLoading && status.data?.bot && !supportsTextAnnouncements && <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900" role="status">目前網站 API 與連線中的 Bot 尚未同時回報純文字支援；需部署新版 API Worker，並將 repo 中的 Bot 更新部署至 Wispbyte，啟用後此選項才會生效。</div>}
       {notice && <div className={`flex items-start gap-2 rounded-md border p-3 text-sm ${notice.ok ? "border-green-200 bg-green-50 text-green-800" : "border-red-200 bg-red-50 text-red-700"}`}>{notice.ok && <CheckCircle2 className="h-4 w-4 shrink-0" />}{notice.text}</div>}

@@ -29,6 +29,12 @@ test("website announcement requests reject malformed selected role IDs", () => {
   assert.equal(result.success, false);
 });
 
+test("website announcement requests allow a blank publisher name to use the Bot fallback", () => {
+  const result = botAnnouncementSchema.safeParse({ ...baseAnnouncement, author: "   " });
+  assert.equal(result.success, true);
+  assert.equal(result.data.author, "");
+});
+
 test("website announcement requests cap selected roles to Discord's allowlist size", () => {
   const roleIds = Array.from({ length: 101 }, (_, index) => String(10000000000000000 + index));
   const result = botAnnouncementSchema.safeParse({ ...baseAnnouncement, roleIds });

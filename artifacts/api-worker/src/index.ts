@@ -1064,7 +1064,7 @@ app.post("/api/admin/bot/announce", async c => {
     const features = (status.data as { features?: { announcementText?: boolean } } | null)?.features;
     if (!status.ok || features?.announcementText !== true) return c.json({ error: "目前 Discord Bot 尚未支援純文字公告；請先更新並重新部署 Bot runtime。" }, 409);
   }
-  const result = await botApiJson(c.env, "/announce", { method: "POST", body: JSON.stringify({ ...body.data, author: actor.voter_name }) });
+  const result = await botApiJson(c.env, "/announce", { method: "POST", body: JSON.stringify(body.data) });
   if (result.ok) background(c, auditStatement(c.env.DB, actor, "discord.announce", "discord_channel", body.data.channelId, { mode: body.data.mode, title: body.data.title }).run());
   return c.json(result.data, (result.ok ? 200 : result.status) as any);
 });

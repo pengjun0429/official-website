@@ -101,7 +101,7 @@ pnpm run deploy
 
 部署 Worker 後，再更新並重啟 Wispbyte Bot。不要把 secret 寫入 `.env.example` 的空欄以外的 repository 檔案，也不要和 `FUMO_WEBHOOK_SECRET` 混用。管理後台不再提供 `vote.started` Webhook 訂閱；其他獨立投票事件和網站事件仍可照常使用既有 webhook relay。
 
-`/fumo/webhook` 仍是一般網站 webhook relay，可供其他事件使用；它不負責投票開始公告。網站 Bot 後台的 Embed 公告可自訂發布者顯示名稱，預設為 `FUMO 官方網站 Bot`；選擇純文字時標題與內容會直接作為一般訊息發送。每次網站公告選取的多個角色只用於該次 `/announce` payload，Bot relay 僅允許這些選中角色被提及，並仍接受舊的單一 `roleId` payload。
+`/fumo/webhook` 仍是一般網站 webhook relay，可供其他事件使用；它不負責投票開始公告。網站 Bot 後台的 Embed 與純文字公告都可自訂發布者顯示名稱，預設為 `FUMO 官方網站 Bot`；純文字公告會以 Discord 標題格式呈現標題，並顯示表單設定的發布者名稱，不會顯示登入管理員的帳號名稱，公告內文保持不變。每次網站公告選取的多個角色只用於該次 `/announce` payload，Bot relay 僅允許這些選中角色被提及，並仍接受舊的單一 `roleId` payload。
 
 ## Discord Developer Portal
 

@@ -105,7 +105,7 @@ export function startWebhookRelay({ client, guildId, channelId, websiteUrl, secr
         const authorName = resolveAnnouncementAuthor({ providedAuthor: data.author, defaultAuthor });
         let message;
         if (mode === "text") {
-          const plainText = [roleMentionOptions.content, title, content].filter(Boolean).join("\n\n");
+          const plainText = [roleMentionOptions.content, title ? `# 📢 ${title}` : "", `發布者：${authorName}`, content].filter(Boolean).join("\n\n");
           if (plainText.length > 2000) { response.writeHead(400); response.end("Plain-text announcement exceeds Discord's 2000 character limit"); return; }
           message = await target.send({ content: plainText, allowedMentions: roleMentionOptions.allowedMentions });
         } else {

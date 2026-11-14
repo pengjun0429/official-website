@@ -128,10 +128,17 @@ test("the website announcement relay remains compatible with a legacy single rol
 
 test("website plain-text announcements allow only their selected roles", async t => {
   const relay = await startTestRelay(t);
-  const response = await relay.sendAnnouncement({ mode: "text", title: "", roleIds: ["123456789012345678"] });
+  const response = await relay.sendAnnouncement({ mode: "text", title: "重要公告", author: "FUMO 行政部", roleIds: ["123456789012345678"] });
   assert.equal(response.status, 200);
-  assert.equal(relay.sentPayload().content, "<@&123456789012345678>\n\nAnnouncement body");
+  assert.equal(relay.sentPayload().content, "<@&123456789012345678>\n\n# 📢 重要公告\n\n發布者：FUMO 行政部\n\nAnnouncement body");
   assert.deepEqual(relay.sentPayload().allowedMentions, { roles: ["123456789012345678"] });
+});
+
+test("website plain-text announcements fall back to the Bot publisher without changing body content", async t => {
+  const relay = await startTestRelay(t);
+  const response = await relay.sendAnnouncement({ mode: "text", title: "", author: "", content: "Keep this body exactly." });
+  assert.equal(response.status, 200);
+  assert.equal(relay.sentPayload().content, "發布者：FUMO Bot\n\nKeep this body exactly.");
 });
 
 test("vote webhook times show Taipei UTC+8 and Paris local time", async t => {
