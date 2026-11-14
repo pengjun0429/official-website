@@ -25,6 +25,8 @@ export function isValidBotPresenceActivity(activity, activityTypes) {
 
   const text = activity.activityText.trim();
   if (text.length > 128 || /[\r\n\u0000]/.test(text)) return false;
+  const state = activity.activityState === undefined ? "" : activity.activityState;
+  if (typeof state !== "string" || state.trim().length > 128 || /[\r\n\u0000]/.test(state)) return false;
   const url = activity.activityUrl === undefined ? "" : activity.activityUrl;
   if (typeof url !== "string") return false;
   if (activity.activityType === "streaming") return isSupportedStreamingUrl(url);
@@ -33,6 +35,8 @@ export function isValidBotPresenceActivity(activity, activityTypes) {
 
 export function buildBotPresenceOptions(activity, activityTypes) {
   const options = { type: activityTypes[activity.activityType] };
+  const state = typeof activity.activityState === "string" ? activity.activityState.trim() : "";
+  if (state) options.state = state;
   if (activity.activityType === "streaming") options.url = activity.activityUrl.trim();
   return options;
 }

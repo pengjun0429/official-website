@@ -39,6 +39,8 @@ export const botPresenceActivitySchema = z.object({
   activityText: z.string().trim().min(1, "活動文字不可空白。")
     .max(128, "活動文字最多 128 字元。")
     .refine(value => !/[\r\n\u0000]/.test(value), "活動文字必須是單行文字。"),
+  activityState: z.string().trim().max(128, "活動狀態最多 128 字元。")
+    .refine(value => !/[\r\n\u0000]/.test(value), "活動狀態必須是單行文字。").optional(),
   activityUrl: z.string().trim().max(2048, "串流網址最多 2048 字元。").optional(),
 }).strict().superRefine(validateActivityUrl);
 
@@ -52,6 +54,8 @@ const legacyBotPresenceSchema = z.object({
   activityType: z.enum(["custom", ...BOT_PRESENCE_ACTIVITY_TYPES]),
   activityText: z.string().trim().max(128, "活動文字最多 128 字元。")
     .refine(value => !/[\r\n\u0000]/.test(value), "活動文字必須是單行文字。"),
+  activityState: z.string().trim().max(128, "活動狀態最多 128 字元。")
+    .refine(value => !/[\r\n\u0000]/.test(value), "活動狀態必須是單行文字。").optional(),
   activityUrl: z.string().trim().max(2048, "串流網址最多 2048 字元。").optional(),
 }).strict().superRefine(validateActivityUrl);
 
@@ -60,6 +64,7 @@ export const botPresenceSchema = z.union([botPresenceConfigSchema, legacyBotPres
   const activity = {
     activityType: value.activityType === "custom" ? "playing" as const : value.activityType,
     activityText: value.activityText,
+    ...(value.activityState?.trim() ? { activityState: value.activityState } : {}),
     ...(value.activityUrl ? { activityUrl: value.activityUrl } : {}),
   };
   return {

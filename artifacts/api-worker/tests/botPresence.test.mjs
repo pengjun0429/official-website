@@ -21,7 +21,7 @@ test("supports multiple Discord activities in the shared activity area", () => {
     }).success, true);
   }
   assert.equal(botPresenceSchema.safeParse({
-    activities: [{ activityType: "streaming", activityText: "正在直播", activityUrl: "https://www.twitch.tv/fumo" }],
+    activities: [{ activityType: "streaming", activityText: "正在直播", activityState: "正在準備直播內容", activityUrl: "https://www.twitch.tv/fumo" }],
     rotationIntervalSeconds: 60,
   }).success, true);
   assert.deepEqual(DEFAULT_BOT_PRESENCE, { activities: [], rotationIntervalSeconds: 60 });
@@ -35,6 +35,9 @@ test("validates activity count, text length, one-line text, and rotation interva
   assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "playing", activityText: "x".repeat(129) }])).success, false);
   assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "playing", activityText: "大會\n開始" }])).success, false);
   assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "playing", activityText: "   " }])).success, false);
+  assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "playing", activityText: "大會", activityState: "正在準備資料" }])).success, true);
+  assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "playing", activityText: "大會", activityState: "x".repeat(129) }])).success, false);
+  assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "playing", activityText: "大會", activityState: "第一行\n第二行" }])).success, false);
   assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "streaming", activityText: "直播" }])).success, false);
   for (const activityUrl of ["http://www.twitch.tv/fumo", "https://twitch.tv.attacker.example/fumo", "https://example.com/watch?v=123", "https://www.youtube.com/", "https://user:pass@www.youtube.com/watch?v=123"]) {
     assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "streaming", activityText: "直播", activityUrl }])).success, false, activityUrl);
@@ -52,6 +55,10 @@ test("validates activity count, text length, one-line text, and rotation interva
 test("converts the prior single-activity format and legacy Custom Status into Playing", () => {
   assert.deepEqual(botPresenceSchema.parse({ activityType: "watching", activityText: "FUMO" }), {
     activities: [{ activityType: "watching", activityText: "FUMO" }],
+    rotationIntervalSeconds: 60,
+  });
+  assert.deepEqual(botPresenceSchema.parse({ activityType: "watching", activityText: "FUMO", activityState: "正在整理網站資料" }), {
+    activities: [{ activityType: "watching", activityText: "FUMO", activityState: "正在整理網站資料" }],
     rotationIntervalSeconds: 60,
   });
   assert.deepEqual(botPresenceSchema.parse({ activityType: "custom", activityText: "舊自訂狀態" }), {
@@ -77,6 +84,8 @@ test("reads prior D1 rows and safely serializes the new list in the existing tex
   });
   const config = { activities: sampleActivities, rotationIntervalSeconds: 90 };
   assert.deepEqual(parseStoredBotPresence("playing", serializeBotPresence(config)), config);
+  const withActivityState = { activities: [{ activityType: "playing", activityText: "大會", activityState: "正在準備會議資料" }], rotationIntervalSeconds: 90 };
+  assert.deepEqual(parseStoredBotPresence("playing", serializeBotPresence(withActivityState)), withActivityState);
   assert.deepEqual(parseStoredBotPresence("playing", ""), DEFAULT_BOT_PRESENCE);
 });
 

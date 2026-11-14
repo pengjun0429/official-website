@@ -285,16 +285,18 @@ async function pollBotPresence() {
     const settings = await fumoBotApi("/api/internal/bot/presence");
     const activityType = settings.activityType;
     const activityText = typeof settings.activityText === "string" ? settings.activityText.trim() : null;
+    const activityState = settings.activityState === undefined ? "" : settings.activityState;
     const activityUrl = typeof settings.activityUrl === "string" ? settings.activityUrl.trim() : "";
-    if (activityText === null || !isValidBotPresenceActivity({ activityType, activityText, activityUrl }, BOT_PRESENCE_ACTIVITY_TYPES)) {
+    if (activityText === null || typeof activityState !== "string"
+      || !isValidBotPresenceActivity({ activityType, activityText, activityState, activityUrl }, BOT_PRESENCE_ACTIVITY_TYPES)) {
       throw new Error("Worker returned invalid Bot presence settings");
     }
-    const presenceKey = JSON.stringify([activityType, activityText, activityUrl]);
+    const presenceKey = JSON.stringify([activityType, activityText, activityState, activityUrl]);
     if (presenceKey === lastAppliedBotPresence) return;
     if (activityText && activityType === "custom") {
       client.user.setPresence({ activities: [{ name: "Custom Status", type: ActivityType.Custom, state: activityText }] });
     } else if (activityText) {
-      client.user.setActivity(activityText, buildBotPresenceOptions({ activityType, activityUrl }, BOT_PRESENCE_ACTIVITY_TYPES));
+      client.user.setActivity(activityText, buildBotPresenceOptions({ activityType, activityState, activityUrl }, BOT_PRESENCE_ACTIVITY_TYPES));
     } else {
       client.user.setPresence({ activities: [] });
     }

@@ -53,6 +53,7 @@ export type BotPresenceActivityType = "playing" | "watching" | "listening" | "co
 export interface BotPresenceActivity {
   activityType: BotPresenceActivityType;
   activityText: string;
+  activityState?: string;
   activityUrl?: string;
 }
 export interface BotPresenceSettings {

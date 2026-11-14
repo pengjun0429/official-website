@@ -34,6 +34,12 @@ function isSupportedStreamingUrl(value: string) {
   }
 }
 
+function isValidActivityState(value: string | undefined) {
+  if (value === undefined) return true;
+  const normalized = value.trim();
+  return normalized.length <= 128 && !/[\r\n\u0000]/.test(value);
+}
+
 function formFromSettings(settings: BotPresenceSettings): PresenceForm {
   const activities = Array.isArray(settings.activities)
     ? settings.activities
@@ -129,6 +135,7 @@ export function BotPresenceEditor({ apiSupportsPresence, runtimeSupportsPresence
     && form.activities.every(activity => activity.activityText.trim().length > 0
       && activity.activityText.trim().length <= 128
       && !/[\r\n\u0000]/.test(activity.activityText)
+      && isValidActivityState(activity.activityState)
       && (activity.activityType === "streaming"
         ? isSupportedStreamingUrl(activity.activityUrl?.trim() ?? "")
         : !activity.activityUrl?.trim()))
@@ -142,7 +149,7 @@ export function BotPresenceEditor({ apiSupportsPresence, runtimeSupportsPresence
     <Card className="fumo-activity-settings">
       <CardHeader className="fumo-activity-settings__header">
         <CardTitle className="fumo-activity-settings__title flex items-center gap-2"><Activity className="h-5 w-5" />Bot 活動輪播</CardTitle>
-        <p className="text-sm text-muted-foreground">可設定最多 10 組不同類型與文字，Bot 會依序輪播。設定儲存至 FUMO 資料庫，現有 Bot 每 30 秒同步一次。</p>
+        <p className="text-sm text-muted-foreground">可設定最多 10 組活動，分別指定類型、名稱、正在做什麼及串流網址；Bot 會依序輪播並同步至 Discord。</p>
       </CardHeader>
       <CardContent className="fumo-activity-settings__content space-y-4">
         {settingsQuery.isLoading && <p className="text-sm text-muted-foreground">正在載入 Bot 活動設定…</p>}
@@ -174,9 +181,14 @@ export function BotPresenceEditor({ apiSupportsPresence, runtimeSupportsPresence
                   <p className="text-xs text-muted-foreground">僅接受 Twitch 或 YouTube 的 HTTPS 頻道、直播或影片網址。</p>
                   {activity.activityUrl && !isSupportedStreamingUrl(activity.activityUrl.trim()) && <p className="text-xs text-red-600" role="alert">請輸入有效的 Twitch／YouTube HTTPS 網址。</p>}
                 </>}
-                <label className="block text-sm font-medium">狀態文字（最多 128 字元）
+                <label className="block text-sm font-medium">活動名稱（最多 128 字元）
                   <Input className="mt-1" maxLength={128} value={activity.activityText} onChange={event => updateActivity(index, "activityText", event.target.value)} placeholder="例如：正在舉行大會" />
                 </label>
+                <label className="block text-sm font-medium">正在做什麼（活動狀態，選填，最多 128 字元）
+                  <Input className="mt-1" maxLength={128} value={activity.activityState ?? ""} onChange={event => updateActivity(index, "activityState", event.target.value)} placeholder="例如：正在準備會議資料" aria-invalid={!isValidActivityState(activity.activityState)} />
+                </label>
+                <p className="text-xs text-muted-foreground">這段文字會以 Discord 活動的 state 顯示；留白則不加入額外文字。</p>
+                {activity.activityState && !isValidActivityState(activity.activityState) && <p className="text-xs text-red-600" role="alert">活動狀態必須是單行文字，且最多 128 字元。</p>}
               </div>
             ))}
             {form.activities.length === 0 && <p className="text-sm text-muted-foreground">目前沒有活動；儲存後會清除 Bot 的活動狀態。</p>}
