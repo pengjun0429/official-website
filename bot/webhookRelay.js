@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { buildRoleMentionOptions, normalizeAnnouncementRoleIds } from "./announcementRoles.js";
+import { DEFAULT_ANNOUNCEMENT_AUTHOR, resolveAnnouncementAuthor } from "./announcementAuthor.js";
 import { formatInTimeZone, VOTE_TIME_ZONES } from "./voteAnnouncements.js";
 
 const EVENT_TITLES = {
@@ -35,7 +36,7 @@ function formatVoteNotificationTime(value) {
   return `台北時間（UTC+8）：${taipei}\n巴黎時間：${paris}`;
 }
 
-function buildEmbed(payload, event, websiteUrl) {
+function buildEmbed(payload, event, websiteUrl, authorName) {
   const vote = payload.vote && typeof payload.vote === "object" ? payload.vote : {};
   const details = payload.details && typeof payload.details === "object" ? payload.details : {};
   const fields = [];
@@ -46,6 +47,7 @@ function buildEmbed(payload, event, websiteUrl) {
   if (event === "ballot.cast") fields.push({ name: "隱私", value: "不包含投票選項", inline: true });
   const description = typeof vote.description === "string" && vote.description ? vote.description.slice(0, 1200) : typeof payload.text === "string" ? payload.text.slice(0, 1200) : "";
   return {
+    author: { name: authorName },
     title: EVENT_TITLES[event] || `📣 FUMO ${event}`,
     description,
     color: 0x5865f2,
@@ -56,7 +58,7 @@ function buildEmbed(payload, event, websiteUrl) {
   };
 }
 
-export function startWebhookRelay({ client, guildId, channelId, websiteUrl, secret, path, port, mentionRoleId, mentionEvents, defaultAuthor, supportsBotPresence = false, logAction = () => {} }) {
+export function startWebhookRelay({ client, guildId, channelId, websiteUrl, secret, path, port, mentionRoleId, mentionEvents, announcementAuthor = "", defaultAuthor = DEFAULT_ANNOUNCEMENT_AUTHOR, supportsBotPresence = false, logAction = () => {} }) {
   const events = new Set(mentionEvents);
   const server = createServer(async (request, response) => {
     if (request.method === "GET" && request.url === "/healthz") {
@@ -100,7 +102,7 @@ export function startWebhookRelay({ client, guildId, channelId, websiteUrl, secr
         if (!content || (mode === "embed" && !title)) { response.writeHead(400); response.end("Content is required; embed announcements also need a title"); return; }
         const roleIds = normalizeAnnouncementRoleIds(data.roleIds, data.roleId);
         const roleMentionOptions = buildRoleMentionOptions(roleIds);
-        const authorName = typeof data.author === "string" && data.author.trim() ? data.author.trim().slice(0, 80) : defaultAuthor;
+        const authorName = resolveAnnouncementAuthor({ configuredAuthor: announcementAuthor, providedAuthor: data.author, defaultAuthor });
         let message;
         if (mode === "text") {
           const plainText = [roleMentionOptions.content, title, content].filter(Boolean).join("\n\n");
@@ -139,7 +141,8 @@ export function startWebhookRelay({ client, guildId, channelId, websiteUrl, secr
       const channel = await client.channels.fetch(channelId);
       if (!channel?.isTextBased() || !channel.isSendable()) throw new Error("Relay channel is not writable");
       const mention = mentionRoleId && events.has(event) ? `<@&${mentionRoleId}>` : "";
-      const message = await channel.send({ content: mention, embeds: [buildEmbed(payload, event, websiteUrl)], allowedMentions: mention ? { roles: [mentionRoleId] } : { parse: [] } });
+      const authorName = resolveAnnouncementAuthor({ configuredAuthor: announcementAuthor, defaultAuthor });
+      const message = await channel.send({ content: mention, embeds: [buildEmbed(payload, event, websiteUrl, authorName)], allowedMentions: mention ? { roles: [mentionRoleId] } : { parse: [] } });
       const vote = payload.vote && typeof payload.vote === "object" ? payload.vote : {};
       logAction("webhook.relay.sent", { event, channelId: channel.id, messageId: message.id, title: typeof vote.name === "string" ? vote.name : null, content: typeof vote.description === "string" ? vote.description : typeof payload.text === "string" ? payload.text : null });
       response.writeHead(204); response.end();

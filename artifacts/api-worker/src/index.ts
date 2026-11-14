@@ -8,6 +8,7 @@ import { canEditVoteDraft, validateVoteDraftFields } from "./voteDrafts";
 import { hasValidBotBearerToken, storedUtcInstantToIso } from "./botVoteAnnouncements";
 import { botAnnouncementSchema } from "./botAnnouncementSchema";
 import { botPresenceSchema, parseStoredBotPresence, selectBotPresenceActivity, serializeBotPresence } from "./botPresence";
+import { findRegistrationByEmail, findRegistrationById } from "./registrationRoster";
 interface Env {
   DB: D1Database;
   CORS_ORIGIN?: string;
@@ -216,7 +217,7 @@ async function voters() {
   votersCache = { value, at: Date.now() }; return value;
 }
 const findVoter = (list: Voter[], id: string) => { for (const v of list) { const rep = v.reps.find(r => r.id === id); if (rep) return { countryName: v.countryName, voterName: rep.name }; } return null; };
-async function registrations() { const rows = await sheet(REGISTRATION_GID); const h = rows[0] ?? []; const idx = (n: string) => h.indexOf(n); return rows.slice(1).map(r => ({ countryName: r[idx("國家名稱")] ?? "", voterName: r[idx("註冊名稱")] ?? "", id: r[idx("註冊ID")] ?? "", email: (r[idx("Email")] ?? "").trim().toLowerCase() })).filter(r => r.id && r.countryName && r.voterName); }
+async function registrations() { const rows = await sheet(REGISTRATION_GID); const h = rows[0] ?? []; const idx = (n: string) => h.indexOf(n); return rows.slice(1).map(r => ({ countryName: r[idx("國家名稱")] ?? "", voterName: r[idx("註冊名稱")] ?? "", id: (r[idx("註冊ID")] ?? "").trim(), email: (r[idx("Email")] ?? "").trim().toLowerCase() })).filter(r => r.id && r.countryName && r.voterName); }
 async function staffRoster() {
   if (staffCache && Date.now() - staffCache.at < 300000) return staffCache.value;
   const parseRoster = (rows: string[][], organization: string): StaffEntry[] => {
@@ -435,7 +436,7 @@ app.get("/api/auth/google/callback", async c => {
     return googleResultResponse(returnTo, "connected", redirectUri, [clearCookie]);
   }
 
-  const registration = (await registrations()).find(r => r.email && r.email === identity.email);
+  const registration = findRegistrationByEmail(await registrations(), identity.email);
   if (!registration) return googleResultResponse("/login", "email_not_allowed", redirectUri, [clearCookie]);
   const existingLink = await c.env.DB.prepare("SELECT voter_id FROM google_account_links WHERE google_sub = ?").bind(identity.subject).first<{ voter_id: string }>();
   if (existingLink && existingLink.voter_id !== registration.id) return googleResultResponse("/login", "google_already_linked", redirectUri, [clearCookie]);
@@ -501,7 +502,7 @@ app.get("/api/auth/discord/callback", async c => {
   }
   const identity = await fetchDiscordIdentity(code, oauthState.code_verifier, clientId, clientSecret, redirectUri);
   if (!identity) return discordResultResponse("/login", "failed", redirectUri, [clearCookie]);
-  const registration = (await registrations()).find(r => r.id === identity.subject);
+  const registration = findRegistrationById(await registrations(), identity.subject);
   if (!registration) return discordResultResponse("/login", "id_not_registered", redirectUri, [clearCookie]);
   const owner = await c.env.DB.prepare("SELECT voter_id FROM discord_account_links WHERE discord_id = ?").bind(identity.subject).first<{ voter_id: string }>();
   if (owner && owner.voter_id !== registration.id) return discordResultResponse("/login", "discord_already_linked", redirectUri, [clearCookie]);
@@ -962,9 +963,28 @@ app.post("/api/votes/:id/close", async c => {
   return c.json({ success: true, message: "Vote closed" });
 });
 
-app.post("/api/auth/register", async c => { const body = z.object({ voterId: z.string().min(1), password: z.string().min(4) }).safeParse(await parseJson(c)); if (!body.success) return c.json({ error: "請填寫 Discord ID 與密碼。" }, 400); const identity = (await registrations()).find(r => r.id === body.data.voterId); if (!identity) return c.json({ error: "此 ID 不在註冊名單中，請先由管理員加入註冊名單。" }, 403); if (await account(c.env.DB, body.data.voterId)) return c.json({ error: "Account already exists. Please login instead." }, 409); await c.env.DB.prepare("INSERT INTO voter_accounts (voter_id, voter_name, country_name, password_hash) VALUES (?, ?, ?, ?)").bind(body.data.voterId, identity.voterName, identity.countryName, await hashPassword(body.data.password)).run(); return c.json({ success: true, voterId: body.data.voterId, voterName: identity.voterName }); });
+app.post("/api/auth/register", async c => { const body = z.object({ voterId: z.string().trim().min(1), password: z.string().min(4) }).safeParse(await parseJson(c)); if (!body.success) return c.json({ error: "請填寫 Discord ID 與密碼。" }, 400); const identity = findRegistrationById(await registrations(), body.data.voterId); if (!identity) return c.json({ error: "此 ID 不在註冊名單中，請先由管理員加入註冊名單。" }, 403); if (await account(c.env.DB, body.data.voterId)) return c.json({ error: "Account already exists. Please login instead." }, 409); await c.env.DB.prepare("INSERT INTO voter_accounts (voter_id, voter_name, country_name, password_hash) VALUES (?, ?, ?, ?)").bind(body.data.voterId, identity.voterName, identity.countryName, await hashPassword(body.data.password)).run(); return c.json({ success: true, voterId: body.data.voterId, voterName: identity.voterName }); });
 app.get("/api/auth/me", async c => { const a = await currentAccount(c); return a ? c.json(publicUser(a)) : c.json({ user: null }, 401); });
-app.post("/api/auth/login", async c => { const body = z.object({ voterId: z.string().min(1), password: z.string().min(1) }).safeParse(await parseJson(c)); if (!body.success) return c.json({ error: "Invalid input" }, 400); const a = await account(c.env.DB, body.data.voterId); if (!a) return c.json({ error: "Account not found. Please register first." }, 403); if (!(await verifyPassword(body.data.password, a.password_hash))) return c.json({ error: "Incorrect password." }, 403); const session = await createSession(c.env.DB, a.voter_id); return json(publicUser(a), 200, { "Set-Cookie": sessionCookie(session.raw, session.maxAge) }); });
+app.post("/api/auth/login", async c => {
+  const body = z.object({ voterId: z.string().trim().min(1), password: z.string().min(1) }).safeParse(await parseJson(c));
+  if (!body.success) return c.json({ error: "Invalid input" }, 400);
+  let registration: RegistrationEntry | null;
+  try {
+    registration = findRegistrationById(await registrations(), body.data.voterId);
+  } catch {
+    return c.json({ error: "無法驗證目前官方註冊名單，請稍後再試。" }, 503, { "Cache-Control": "no-store" });
+  }
+  if (!registration) return c.json({ error: "此 ID 不在目前官方註冊名單中，無法登入。" }, 403);
+  const a = await account(c.env.DB, body.data.voterId);
+  if (!a) return c.json({ error: "Account not found. Please register first." }, 403);
+  if (!(await verifyPassword(body.data.password, a.password_hash))) return c.json({ error: "Incorrect password." }, 403);
+  if (a.voter_name !== registration.voterName || a.country_name !== registration.countryName) {
+    await c.env.DB.prepare("UPDATE voter_accounts SET voter_name = ?, country_name = ?, updated_at = datetime('now') WHERE voter_id = ?")
+      .bind(registration.voterName, registration.countryName, a.voter_id).run();
+  }
+  const session = await createSession(c.env.DB, a.voter_id);
+  return json(publicUser({ ...a, voter_name: registration.voterName, country_name: registration.countryName }), 200, { "Set-Cookie": sessionCookie(session.raw, session.maxAge) });
+});
 app.post("/api/auth/logout", async c => { const token = cookieValue(c, SESSION_COOKIE); if (token) await c.env.DB.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(await sessionHash(token)).run(); return json({ success: true }, 200, { "Set-Cookie": clearSessionCookie() }); });
 app.post("/api/auth/change-password", async c => { const body = z.object({ oldPassword: z.string().min(1), newPassword: z.string().min(4) }).safeParse(await parseJson(c)); if (!body.success) return c.json({ error: "Invalid input" }, 400); const a = await currentAccount(c); if (!a || !(await verifyPassword(body.data.oldPassword, a.password_hash))) return c.json({ error: "Incorrect current password." }, 403); await c.env.DB.prepare("UPDATE voter_accounts SET password_hash = ?, updated_at = datetime('now') WHERE voter_id = ?").bind(await hashPassword(body.data.newPassword), a.voter_id).run(); return c.json({ success: true }); });
 

@@ -29,8 +29,9 @@ test("a scheduled vote becomes due exactly at the start instant", () => {
 });
 
 test("Bot announcement uses the configured meeting number and both local time zones", () => {
-  const payload = buildVoteStartAnnouncement(vote, "https://www.micronationfumo.org");
+  const payload = buildVoteStartAnnouncement(vote, "https://www.micronationfumo.org", "FUMO Council");
   const embed = payload.embeds[0];
+  assert.deepEqual(embed.author, { name: "FUMO Council" });
   assert.equal(embed.title, "第 43 次例行大會通知");
   assert.match(embed.fields[0].value, /台北時間（UTC\+8）：2026\/03\/29 09:30/);
   assert.match(embed.fields[0].value, /巴黎時間：2026\/03\/29 03:30/);
@@ -45,6 +46,10 @@ test("the Bot title follows each vote's editable meeting number and name", () =>
   assert.equal(customized.embeds[0].title, "第 8 次臨時會議通知");
 });
 
+test("vote announcements use the standard publisher when no author is configured", () => {
+  assert.deepEqual(buildVoteStartAnnouncement(vote, "https://www.micronationfumo.org").embeds[0].author, { name: "FUMO 官方網站 Bot" });
+});
+
 test("missing or invalid meeting numbers are never guessed", () => {
   assert.equal(isVoteAnnouncementDue({ ...vote, regularMeetingNumber: null }, START), false);
   assert.throws(() => buildVoteStartAnnouncement({ ...vote, regularMeetingNumber: null }, "https://www.micronationfumo.org"));
@@ -55,10 +60,11 @@ test("the bot claims and sends once when due, then persists the Discord message 
   const results = await processDueVoteAnnouncements([vote], {
     now: START,
     websiteUrl: "https://www.micronationfumo.org",
+    announcementAuthor: "FUMO Council",
     claim: async id => ({ claimed: true, claimToken: "claim-27", vote: { ...vote, id } }),
     findExisting: async () => null,
     send: async (_claimedVote, payload) => {
-      calls.push(["channel.send", payload.embeds[0].title]);
+      calls.push(["channel.send", payload.embeds[0].title, payload.embeds[0].author.name]);
       return { id: "123456789012345678" };
     },
     markSent: async (...args) => calls.push(["markSent", ...args]),
@@ -66,7 +72,7 @@ test("the bot claims and sends once when due, then persists the Discord message 
   });
 
   assert.deepEqual(calls, [
-    ["channel.send", "第 43 次例行大會通知"],
+    ["channel.send", "第 43 次例行大會通知", "FUMO Council"],
     ["markSent", 27, "claim-27", "123456789012345678"],
   ]);
   assert.deepEqual(results, [{ voteId: 27, status: "sent" }]);

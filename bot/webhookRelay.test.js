@@ -16,7 +16,7 @@ test("the webhook relay keeps unrelated website and vote lifecycle events", () =
   assert.equal(shouldIgnoreWebhookEvent("member.updated"), false);
 });
 
-async function startTestRelay(t) {
+async function startTestRelay(t, options = {}) {
   let sentPayload;
   const channel = {
     id: "channel-1",
@@ -53,6 +53,7 @@ async function startTestRelay(t) {
     mentionRoleId: "456789012345678901",
     mentionEvents: ["vote.published"],
     defaultAuthor: "FUMO Bot",
+    ...options,
   });
   await once(server, "listening");
   t.after(() => new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve())));
@@ -88,7 +89,26 @@ test("a website announcement mentions only its selected roles and allowlists tho
   const response = await relay.sendAnnouncement({ roleIds: ["123456789012345678", "234567890123456789"] });
   assert.equal(response.status, 200);
   assert.equal(relay.sentPayload().content, "<@&123456789012345678> <@&234567890123456789>");
+  assert.equal(relay.sentPayload().embeds[0].author.name, "FUMO Bot");
   assert.deepEqual(relay.sentPayload().allowedMentions, { roles: ["123456789012345678", "234567890123456789"] });
+});
+
+test("the configured publisher overrides website input and appears on lifecycle webhook embeds", async t => {
+  const relay = await startTestRelay(t, { announcementAuthor: "FUMO Global Publisher" });
+  const response = await relay.sendAnnouncement({ author: "Website admin name" });
+  assert.equal(response.status, 200);
+  assert.equal(relay.sentPayload().embeds[0].author.name, "FUMO Global Publisher");
+
+  const voteResponse = await relay.sendVoteEvent();
+  assert.equal(voteResponse.status, 204);
+  assert.equal(relay.sentPayload().embeds[0].author.name, "FUMO Global Publisher");
+});
+
+test("an explicit website announcement author remains the fallback when no global override is set", async t => {
+  const relay = await startTestRelay(t);
+  const response = await relay.sendAnnouncement({ author: "One-time publisher" });
+  assert.equal(response.status, 200);
+  assert.equal(relay.sentPayload().embeds[0].author.name, "One-time publisher");
 });
 
 test("the website announcement relay remains compatible with a legacy single roleId payload", async t => {

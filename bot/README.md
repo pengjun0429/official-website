@@ -57,7 +57,7 @@ npm start
 - `FUMO_WEBHOOK_PATH`：預設 `/fumo/webhook`
 - `BOT_HTTP_PORT`：預設 `3000`；Wispbyte 若提供 `PORT`，會優先使用 `PORT`
 - `FUMO_BOT_MENTION_EVENTS`：要提及公告身分組的事件，逗號分隔
-- `FUMO_ANNOUNCEMENT_AUTHOR`：公告預設發布者名稱，預設為 `FUMO 官方網站 Bot`
+- `FUMO_ANNOUNCEMENT_AUTHOR`：全域公告發布者名稱；設定後優先套用於網站公告、`/公告`、自動投票通知及其他 webhook embed。留空時沿用各來源名稱或 `FUMO 官方網站 Bot` 預設；投票通知的操作者 byline 仍獨立顯示。
 - `FUMO_PROPOSAL_CHANNEL_ID`：議案整理來源頻道，預設為 `1414537668406149140`
 - `FUMO_ADMISSION_CHANNEL_ID`：入聯整理來源 Forum 頻道，未設定時沿用 `FUMO_PROPOSAL_CHANNEL_ID`
 - `FUMO_GUILD_BACKUP_DIR`：伺服器架構 JSON 的本機保存目錄；預設為 `bot/data/server-backups`（相對於 `bot/`）

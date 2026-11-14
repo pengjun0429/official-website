@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { randomUUID } from "node:crypto";
+import { DEFAULT_ANNOUNCEMENT_AUTHOR, normalizeAnnouncementAuthor, resolveAnnouncementAuthor } from "./announcementAuthor.js";
 import { startWebhookRelay } from "./webhookRelay.js";
 import { processDueVoteAnnouncements, voteAnnouncementMarker } from "./voteAnnouncements.js";
 import { buildVoteAnnouncementRoleOptions, getVoteAnnouncementConfig } from "./voteAnnouncementConfig.js";
@@ -62,7 +63,7 @@ const WEBHOOK_SECRET = process.env.FUMO_WEBHOOK_SECRET || "";
 const WEBHOOK_PATH = process.env.FUMO_WEBHOOK_PATH || "/fumo/webhook";
 const BOT_HTTP_PORT = Number(process.env.PORT || process.env.BOT_HTTP_PORT || 3000);
 const BOT_MENTION_EVENTS = (process.env.FUMO_BOT_MENTION_EVENTS || "vote.created,vote.published,vote.closing_soon,vote.closed").split(",").map(value => value.trim()).filter(Boolean);
-const ANNOUNCEMENT_AUTHOR = process.env.FUMO_ANNOUNCEMENT_AUTHOR || "FUMO 官方網站 Bot";
+const ANNOUNCEMENT_AUTHOR = normalizeAnnouncementAuthor(process.env.FUMO_ANNOUNCEMENT_AUTHOR);
 const PROPOSAL_CHANNEL_ID = process.env.FUMO_PROPOSAL_CHANNEL_ID || "1414537668406149140";
 const ADMISSION_CHANNEL_ID = process.env.FUMO_ADMISSION_CHANNEL_ID || PROPOSAL_CHANNEL_ID;
 const WELCOME_CHANNEL_ID = process.env.FUMO_WELCOME_CHANNEL_ID || ANNOUNCEMENT_CHANNEL_ID;
@@ -175,6 +176,7 @@ async function registerCommands() {
 }
 
 async function postAnnouncement(title, content, author, mode = "embed") {
+  const authorName = resolveAnnouncementAuthor({ configuredAuthor: ANNOUNCEMENT_AUTHOR, providedAuthor: author });
   const channel = await client.channels.fetch(ANNOUNCEMENT_CHANNEL_ID);
   if (!channel?.isTextBased() || !channel.isSendable()) throw new Error("Announcement channel is not writable");
   const roleMention = ANNOUNCEMENT_ROLE_ID ? `<@&${ANNOUNCEMENT_ROLE_ID}>` : "";
@@ -187,7 +189,7 @@ async function postAnnouncement(title, content, author, mode = "embed") {
   } else {
     message = await channel.send({
       content: roleMention,
-      embeds: [{ title: `📢 ${title}`, description: content, color: 0x5865f2, url: WEBSITE_URL, footer: { text: `FUMO 官方網站 · 發布者 ${author}` }, timestamp: new Date().toISOString() }],
+      embeds: [{ author: { name: authorName }, title: `📢 ${title}`, description: content, color: 0x5865f2, url: WEBSITE_URL, footer: { text: "FUMO 官方網站 Bot" }, timestamp: new Date().toISOString() }],
       allowedMentions,
     });
   }
@@ -215,6 +217,7 @@ async function pollVoteAnnouncements() {
 
     const results = await processDueVoteAnnouncements(items, {
       websiteUrl: WEBSITE_URL,
+      announcementAuthor: ANNOUNCEMENT_AUTHOR,
       claim: async voteId => {
         const claimToken = randomUUID();
         const result = await fumoBotApi(`/api/internal/bot/vote-announcements/${voteId}/claim`, {
@@ -919,7 +922,7 @@ client.once("ready", async readyClient => {
   }
   startVoteAnnouncementPolling();
   startBotPresencePolling();
-  startWebhookRelay({ client, guildId: GUILD_ID, channelId: ANNOUNCEMENT_CHANNEL_ID, websiteUrl: WEBSITE_URL, secret: WEBHOOK_SECRET, path: WEBHOOK_PATH, port: BOT_HTTP_PORT, mentionRoleId: ANNOUNCEMENT_ROLE_ID, mentionEvents: BOT_MENTION_EVENTS, defaultAuthor: ANNOUNCEMENT_AUTHOR, supportsBotPresence: Boolean(BOT_API_SECRET), logAction });
+  startWebhookRelay({ client, guildId: GUILD_ID, channelId: ANNOUNCEMENT_CHANNEL_ID, websiteUrl: WEBSITE_URL, secret: WEBHOOK_SECRET, path: WEBHOOK_PATH, port: BOT_HTTP_PORT, mentionRoleId: ANNOUNCEMENT_ROLE_ID, mentionEvents: BOT_MENTION_EVENTS, announcementAuthor: ANNOUNCEMENT_AUTHOR, defaultAuthor: DEFAULT_ANNOUNCEMENT_AUTHOR, supportsBotPresence: Boolean(BOT_API_SECRET), logAction });
   registerCommands().catch(error => { console.error("Command registration failed", error); process.exitCode = 1; });
 });
 client.on("guildMemberAdd", member => {

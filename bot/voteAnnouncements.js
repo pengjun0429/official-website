@@ -1,3 +1,5 @@
+import { resolveAnnouncementAuthor } from "./announcementAuthor.js";
+
 export const VOTE_TIME_ZONES = {
   taipei: "Asia/Taipei",
   paris: "Europe/Paris",
@@ -41,7 +43,7 @@ export function voteAnnouncementMarker(voteId) {
   return `FUMO-VOTE-START:${voteId}`;
 }
 
-export function buildVoteStartAnnouncement(vote, websiteUrl) {
+export function buildVoteStartAnnouncement(vote, websiteUrl, announcementAuthor) {
   const meetingNumber = Number(vote?.regularMeetingNumber);
   if (!Number.isSafeInteger(meetingNumber) || meetingNumber < 1) {
     throw new Error("A positive regular meeting number is required for vote announcements");
@@ -62,6 +64,7 @@ export function buildVoteStartAnnouncement(vote, websiteUrl) {
 
   return {
     embeds: [{
+      author: { name: resolveAnnouncementAuthor({ providedAuthor: announcementAuthor }) },
       title: `第 ${meetingNumber} 次${name}通知`,
       description,
       color: 0x00334d,
@@ -82,7 +85,7 @@ export function buildVoteStartAnnouncement(vote, websiteUrl) {
  */
 export async function processDueVoteAnnouncements(
   candidates,
-  { now = Date.now(), websiteUrl, claim, findExisting, send, markSent, releaseClaim },
+  { now = Date.now(), websiteUrl, announcementAuthor, claim, findExisting, send, markSent, releaseClaim },
 ) {
   const results = [];
   for (const candidate of Array.isArray(candidates) ? candidates : []) {
@@ -102,7 +105,7 @@ export async function processDueVoteAnnouncements(
     try {
       message = await findExisting(vote);
       if (message) recovered = true;
-      else message = await send(vote, buildVoteStartAnnouncement(vote, websiteUrl));
+      else message = await send(vote, buildVoteStartAnnouncement(vote, websiteUrl, announcementAuthor));
       await markSent(vote.id, claimToken, message.id);
       results.push({ voteId: vote.id, status: recovered ? "recovered" : "sent" });
     } catch (error) {
