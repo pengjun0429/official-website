@@ -93,15 +93,22 @@ test("a website announcement mentions only its selected roles and allowlists tho
   assert.deepEqual(relay.sentPayload().allowedMentions, { roles: ["123456789012345678", "234567890123456789"] });
 });
 
-test("the configured publisher overrides website input and appears on lifecycle webhook embeds", async t => {
+test("website form publisher overrides the legacy global name while vote event attribution stays separate", async t => {
   const relay = await startTestRelay(t, { announcementAuthor: "FUMO Global Publisher" });
   const response = await relay.sendAnnouncement({ author: "Website admin name" });
   assert.equal(response.status, 200);
-  assert.equal(relay.sentPayload().embeds[0].author.name, "FUMO Global Publisher");
+  assert.equal(relay.sentPayload().embeds[0].author.name, "Website admin name");
 
   const voteResponse = await relay.sendVoteEvent();
   assert.equal(voteResponse.status, 204);
   assert.equal(relay.sentPayload().embeds[0].author.name, "FUMO Global Publisher");
+});
+
+test("website announcement falls back to the default instead of a legacy global publisher when the form name is empty", async t => {
+  const relay = await startTestRelay(t, { announcementAuthor: "FUMO Global Publisher" });
+  const response = await relay.sendAnnouncement({ author: "" });
+  assert.equal(response.status, 200);
+  assert.equal(relay.sentPayload().embeds[0].author.name, "FUMO Bot");
 });
 
 test("an explicit website announcement author remains the fallback when no global override is set", async t => {

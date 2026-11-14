@@ -178,7 +178,7 @@ async function registerCommands() {
 }
 
 async function postAnnouncement(title, content, author, mode = "embed") {
-  const authorName = resolveAnnouncementAuthor({ configuredAuthor: ANNOUNCEMENT_AUTHOR, providedAuthor: author });
+  const authorName = resolveAnnouncementAuthor({ providedAuthor: author });
   const channel = await client.channels.fetch(ANNOUNCEMENT_CHANNEL_ID);
   if (!channel?.isTextBased() || !channel.isSendable()) throw new Error("Announcement channel is not writable");
   const roleMention = ANNOUNCEMENT_ROLE_ID ? `<@&${ANNOUNCEMENT_ROLE_ID}>` : "";

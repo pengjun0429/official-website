@@ -102,7 +102,7 @@ export function startWebhookRelay({ client, guildId, channelId, websiteUrl, secr
         if (!content || (mode === "embed" && !title)) { response.writeHead(400); response.end("Content is required; embed announcements also need a title"); return; }
         const roleIds = normalizeAnnouncementRoleIds(data.roleIds, data.roleId);
         const roleMentionOptions = buildRoleMentionOptions(roleIds);
-        const authorName = resolveAnnouncementAuthor({ configuredAuthor: announcementAuthor, providedAuthor: data.author, defaultAuthor });
+        const authorName = resolveAnnouncementAuthor({ providedAuthor: data.author, defaultAuthor });
         let message;
         if (mode === "text") {
           const plainText = [roleMentionOptions.content, title, content].filter(Boolean).join("\n\n");
