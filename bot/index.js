@@ -5,6 +5,7 @@ import { startWebhookRelay } from "./webhookRelay.js";
 import { processDueVoteAnnouncements, voteAnnouncementMarker } from "./voteAnnouncements.js";
 import { buildVoteAnnouncementRoleOptions, getVoteAnnouncementConfig } from "./voteAnnouncementConfig.js";
 import { extractApplicationOwnerId, isBotOwner } from "./ownerAuth.js";
+import { buildBotPresenceOptions, isValidBotPresenceActivity } from "./presence.js";
 import {
   createGuildBackup,
   getBackupDirectory,
@@ -52,6 +53,7 @@ const BOT_PRESENCE_ACTIVITY_TYPES = Object.freeze({
   watching: ActivityType.Watching,
   listening: ActivityType.Listening,
   competing: ActivityType.Competing,
+  streaming: ActivityType.Streaming,
 });
 const WEBSITE_URL = process.env.FUMO_WEBSITE_URL || "https://www.micronationfumo.org";
 const ADMIN_IDS = new Set((process.env.FUMO_BOT_ADMIN_IDS || "").split(",").map(value => value.trim()).filter(Boolean));
@@ -283,18 +285,16 @@ async function pollBotPresence() {
     const settings = await fumoBotApi("/api/internal/bot/presence");
     const activityType = settings.activityType;
     const activityText = typeof settings.activityText === "string" ? settings.activityText.trim() : null;
-    if (!Object.prototype.hasOwnProperty.call(BOT_PRESENCE_ACTIVITY_TYPES, activityType)
-      || activityText === null
-      || activityText.length > 128
-      || /[\r\n\u0000]/.test(activityText)) {
+    const activityUrl = typeof settings.activityUrl === "string" ? settings.activityUrl.trim() : "";
+    if (activityText === null || !isValidBotPresenceActivity({ activityType, activityText, activityUrl }, BOT_PRESENCE_ACTIVITY_TYPES)) {
       throw new Error("Worker returned invalid Bot presence settings");
     }
-    const presenceKey = JSON.stringify([activityType, activityText]);
+    const presenceKey = JSON.stringify([activityType, activityText, activityUrl]);
     if (presenceKey === lastAppliedBotPresence) return;
     if (activityText && activityType === "custom") {
       client.user.setPresence({ activities: [{ name: "Custom Status", type: ActivityType.Custom, state: activityText }] });
     } else if (activityText) {
-      client.user.setActivity(activityText, { type: BOT_PRESENCE_ACTIVITY_TYPES[activityType] });
+      client.user.setActivity(activityText, buildBotPresenceOptions({ activityType, activityUrl }, BOT_PRESENCE_ACTIVITY_TYPES));
     } else {
       client.user.setPresence({ activities: [] });
     }

@@ -20,6 +20,10 @@ test("supports multiple Discord activities in the shared activity area", () => {
       rotationIntervalSeconds: 60,
     }).success, true);
   }
+  assert.equal(botPresenceSchema.safeParse({
+    activities: [{ activityType: "streaming", activityText: "正在直播", activityUrl: "https://www.twitch.tv/fumo" }],
+    rotationIntervalSeconds: 60,
+  }).success, true);
   assert.deepEqual(DEFAULT_BOT_PRESENCE, { activities: [], rotationIntervalSeconds: 60 });
 });
 
@@ -31,6 +35,14 @@ test("validates activity count, text length, one-line text, and rotation interva
   assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "playing", activityText: "x".repeat(129) }])).success, false);
   assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "playing", activityText: "大會\n開始" }])).success, false);
   assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "playing", activityText: "   " }])).success, false);
+  assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "streaming", activityText: "直播" }])).success, false);
+  for (const activityUrl of ["http://www.twitch.tv/fumo", "https://twitch.tv.attacker.example/fumo", "https://example.com/watch?v=123", "https://www.youtube.com/", "https://user:pass@www.youtube.com/watch?v=123"]) {
+    assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "streaming", activityText: "直播", activityUrl }])).success, false, activityUrl);
+  }
+  assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "playing", activityText: "遊戲", activityUrl: "https://www.twitch.tv/fumo" }])).success, false);
+  for (const activityUrl of ["https://www.twitch.tv/fumo", "https://youtube.com/live/abc", "https://youtu.be/abc123"]) {
+    assert.equal(botPresenceSchema.safeParse(makeConfig([{ activityType: "streaming", activityText: "直播", activityUrl }])).success, true, activityUrl);
+  }
   assert.equal(botPresenceSchema.safeParse(makeConfig([], 45)).success, false);
   assert.equal(botPresenceSchema.safeParse(makeConfig([], 601)).success, false);
   assert.equal(botPresenceSchema.safeParse(makeConfig([], 30)).success, true);
@@ -44,6 +56,10 @@ test("converts the prior single-activity format and legacy Custom Status into Pl
   });
   assert.deepEqual(botPresenceSchema.parse({ activityType: "custom", activityText: "舊自訂狀態" }), {
     activities: [{ activityType: "playing", activityText: "舊自訂狀態" }],
+    rotationIntervalSeconds: 60,
+  });
+  assert.deepEqual(botPresenceSchema.parse({ activityType: "streaming", activityText: "直播", activityUrl: "https://www.youtube.com/watch?v=abc" }), {
+    activities: [{ activityType: "streaming", activityText: "直播", activityUrl: "https://www.youtube.com/watch?v=abc" }],
     rotationIntervalSeconds: 60,
   });
   assert.deepEqual(botPresenceSchema.parse({ activityType: "playing", activityText: "" }), DEFAULT_BOT_PRESENCE);

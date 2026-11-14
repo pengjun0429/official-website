@@ -49,10 +49,11 @@ export async function fetchBotStatus(): Promise<{ ok: boolean; bot: boolean; fea
   return data;
 }
 
-export type BotPresenceActivityType = "playing" | "watching" | "listening" | "competing";
+export type BotPresenceActivityType = "playing" | "watching" | "listening" | "competing" | "streaming";
 export interface BotPresenceActivity {
   activityType: BotPresenceActivityType;
   activityText: string;
+  activityUrl?: string;
 }
 export interface BotPresenceSettings {
   activityType: BotPresenceActivityType;

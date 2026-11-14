@@ -20,7 +20,19 @@ const activityTypeOptions: { value: BotPresenceActivityType; label: string }[] =
   { value: "watching", label: "正在觀看" },
   { value: "listening", label: "正在聆聽" },
   { value: "competing", label: "正在競賽" },
+  { value: "streaming", label: "正在直播（Streaming）" },
 ];
+
+function isSupportedStreamingUrl(value: string) {
+  try {
+    const url = new URL(value);
+    const hosts = new Set(["twitch.tv", "www.twitch.tv", "m.twitch.tv", "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"]);
+    return url.protocol === "https:" && !url.username && !url.password && !url.port
+      && hosts.has(url.hostname.toLowerCase()) && url.pathname.split("/").filter(Boolean).length > 0;
+  } catch {
+    return false;
+  }
+}
 
 function formFromSettings(settings: BotPresenceSettings): PresenceForm {
   const activities = Array.isArray(settings.activities)
@@ -81,6 +93,19 @@ export function BotPresenceEditor({ apiSupportsPresence, runtimeSupportsPresence
     } : current);
   };
 
+  const updateActivityType = (index: number, activityType: BotPresenceActivityType) => {
+    setNotice(null);
+    setForm(current => current ? {
+      ...current,
+      activities: current.activities.map((activity, activityIndex) => {
+        if (activityIndex !== index) return activity;
+        const next = { ...activity, activityType };
+        if (activityType !== "streaming") delete next.activityUrl;
+        return next;
+      }),
+    } : current);
+  };
+
   const updateRotationInterval = (value: number) => {
     setNotice(null);
     setForm(current => current ? { ...current, rotationIntervalSeconds: value } : current);
@@ -103,7 +128,10 @@ export function BotPresenceEditor({ apiSupportsPresence, runtimeSupportsPresence
     && form.activities.length <= MAX_ACTIVITIES
     && form.activities.every(activity => activity.activityText.trim().length > 0
       && activity.activityText.trim().length <= 128
-      && !/[\r\n\u0000]/.test(activity.activityText))
+      && !/[\r\n\u0000]/.test(activity.activityText)
+      && (activity.activityType === "streaming"
+        ? isSupportedStreamingUrl(activity.activityUrl?.trim() ?? "")
+        : !activity.activityUrl?.trim()))
     && Number.isInteger(form.rotationIntervalSeconds)
     && form.rotationIntervalSeconds >= 30
     && form.rotationIntervalSeconds <= 600
@@ -135,10 +163,17 @@ export function BotPresenceEditor({ apiSupportsPresence, runtimeSupportsPresence
                   </div>
                 </div>
                 <label className="block text-sm font-medium">活動類型
-                  <select className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={activity.activityType} onChange={event => updateActivity(index, "activityType", event.target.value as BotPresenceActivityType)}>
+                  <select className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={activity.activityType} onChange={event => updateActivityType(index, event.target.value as BotPresenceActivityType)}>
                     {activityTypeOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                 </label>
+                {activity.activityType === "streaming" && <>
+                  <label className="block text-sm font-medium">Streaming 網址（HTTPS Twitch／YouTube）
+                    <Input className="mt-1" type="url" maxLength={2048} value={activity.activityUrl ?? ""} onChange={event => updateActivity(index, "activityUrl", event.target.value)} placeholder="https://www.twitch.tv/頻道名稱" aria-invalid={Boolean(activity.activityUrl && !isSupportedStreamingUrl(activity.activityUrl.trim()))} />
+                  </label>
+                  <p className="text-xs text-muted-foreground">僅接受 Twitch 或 YouTube 的 HTTPS 頻道、直播或影片網址。</p>
+                  {activity.activityUrl && !isSupportedStreamingUrl(activity.activityUrl.trim()) && <p className="text-xs text-red-600" role="alert">請輸入有效的 Twitch／YouTube HTTPS 網址。</p>}
+                </>}
                 <label className="block text-sm font-medium">狀態文字（最多 128 字元）
                   <Input className="mt-1" maxLength={128} value={activity.activityText} onChange={event => updateActivity(index, "activityText", event.target.value)} placeholder="例如：正在舉行大會" />
                 </label>

@@ -1,14 +1,46 @@
 import { z } from "zod";
 
-export const BOT_PRESENCE_ACTIVITY_TYPES = ["playing", "watching", "listening", "competing"] as const;
+export const BOT_PRESENCE_ACTIVITY_TYPES = ["playing", "watching", "listening", "competing", "streaming"] as const;
 export type BotPresenceActivityType = typeof BOT_PRESENCE_ACTIVITY_TYPES[number];
+
+const STREAMING_HOSTS = new Set([
+  "twitch.tv", "www.twitch.tv", "m.twitch.tv",
+  "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be",
+]);
+
+export function isSupportedStreamingUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:"
+      && !url.username
+      && !url.password
+      && !url.port
+      && STREAMING_HOSTS.has(url.hostname.toLowerCase())
+      && url.pathname.split("/").filter(Boolean).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function validateActivityUrl(activity: { activityType: string; activityUrl?: string }, ctx: z.RefinementCtx) {
+  if (activity.activityType === "streaming") {
+    if (!activity.activityUrl) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["activityUrl"], message: "Streaming 活動必須填寫 Twitch 或 YouTube 網址。" });
+    } else if (!isSupportedStreamingUrl(activity.activityUrl)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["activityUrl"], message: "請輸入有效的 HTTPS Twitch 或 YouTube 頻道、直播或影片網址。" });
+    }
+  } else if (activity.activityUrl) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["activityUrl"], message: "只有 Streaming 活動可以設定串流網址。" });
+  }
+}
 
 export const botPresenceActivitySchema = z.object({
   activityType: z.enum(BOT_PRESENCE_ACTIVITY_TYPES),
   activityText: z.string().trim().min(1, "活動文字不可空白。")
     .max(128, "活動文字最多 128 字元。")
     .refine(value => !/[\r\n\u0000]/.test(value), "活動文字必須是單行文字。"),
-}).strict();
+  activityUrl: z.string().trim().max(2048, "串流網址最多 2048 字元。").optional(),
+}).strict().superRefine(validateActivityUrl);
 
 export const botPresenceConfigSchema = z.object({
   activities: z.array(botPresenceActivitySchema).max(10, "最多可設定 10 組 Bot 活動。"),
@@ -20,12 +52,18 @@ const legacyBotPresenceSchema = z.object({
   activityType: z.enum(["custom", ...BOT_PRESENCE_ACTIVITY_TYPES]),
   activityText: z.string().trim().max(128, "活動文字最多 128 字元。")
     .refine(value => !/[\r\n\u0000]/.test(value), "活動文字必須是單行文字。"),
-}).strict();
+  activityUrl: z.string().trim().max(2048, "串流網址最多 2048 字元。").optional(),
+}).strict().superRefine(validateActivityUrl);
 
 export const botPresenceSchema = z.union([botPresenceConfigSchema, legacyBotPresenceSchema]).transform(value => {
   if ("activities" in value) return value;
+  const activity = {
+    activityType: value.activityType === "custom" ? "playing" as const : value.activityType,
+    activityText: value.activityText,
+    ...(value.activityUrl ? { activityUrl: value.activityUrl } : {}),
+  };
   return {
-    activities: value.activityText ? [{ activityType: value.activityType === "custom" ? "playing" : value.activityType, activityText: value.activityText }] : [],
+    activities: value.activityText ? [activity] : [],
     rotationIntervalSeconds: 60,
   };
 });
