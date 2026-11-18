@@ -94,6 +94,7 @@ export function SiteFooter() {
             <a href="https://www.micronationfumo.org/" target="_blank" rel="noopener noreferrer">micronationfumo.org</a>
             <a href="https://damcurryrice.com" target="_blank" rel="noopener noreferrer"><Link2 aria-hidden="true" />{isEnglish ? "Website by FUMO & Dam Curry Rice" : "FUMO × 蛋包咖哩飯"}</a>
             {isAdmin && <Link href="/bot-admin"><Shield aria-hidden="true" />{isEnglish ? "Discord Bot admin" : "Discord Bot 後台"}</Link>}
+            <a href="https://icp.gov.moe/?keyword=20260437" target="_blank" rel="noopener noreferrer">萌ICP备20260437号</a>
           </div>
           <p>{isEnglish ? "Peace, dialogue and cooperation." : "和平交流，合作共創。"}</p>
         </div>

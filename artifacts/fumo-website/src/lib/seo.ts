@@ -9,20 +9,20 @@ export interface SeoMetadata {
 }
 
 export const SITE_ORIGIN = "https://www.micronationfumo.org";
-const SITE_NAME = "聯合微國家組織 F.U.M.O.";
+const SITE_NAME = "FUMO 聯合微國家組織官方網站";
 const DEFAULT_IMAGE = `${SITE_ORIGIN}/opengraph.jpg`;
 
 const routeMetadata: Record<string, { zh: Omit<SeoMetadata, "path">; en: Omit<SeoMetadata, "path"> }> = {
   "/": {
     zh: {
-      title: "聯合微國家組織 F.U.M.O.｜會員國交流、組織治理與國際合作",
-      description: "聯合微國家組織（F.U.M.O.）是以微國家交流、國際合作與和平治理為宗旨的組織。瀏覽會員國與觀察國名錄、組織憲章、法規、職位報告及公開投票資訊。",
-      keywords: "聯合微國家組織,FUMO,微國家,國際組織,微國家外交,會員國合作",
+      title: "FUMO 聯合微國家組織官方網站｜會員國交流與國際合作",
+      description: "FUMO（F.U.M.O.，Federation of United Micronations Organisation；中文名稱為聯合微國家組織）致力於微國家交流、合作與和平治理。查看會員國、觀察國、憲章、法規、職位報告及公開投票資訊。",
+      keywords: "FUMO,F.U.M.O.,聯合微國家組織,Federation of United Micronations Organisation,微國家組織,微國家外交,會員國合作",
     },
     en: {
-      title: "FUMO｜Federation of United Micronations Organisation Official Website",
-      description: "Explore the Federation of United Micronations Organisation (FUMO), its member and observer states, charter, regulations, public offices, and voting information.",
-      keywords: "FUMO,micronations,international organization,member states,micronational diplomacy",
+      title: "FUMO | Federation of United Micronations Organisation Official Website",
+      description: "FUMO (the Federation of United Micronations Organisation) is an international organization for micronations, promoting peaceful dialogue, cooperation, and governance. Explore its member and observer states, charter, regulations, public offices, and voting information.",
+      keywords: "FUMO,F.U.M.O.,Federation of United Micronations Organisation,micronations,international organization,member states,micronational diplomacy",
     },
   },
   "/members": {
@@ -223,15 +223,16 @@ export function applySeoMetadata(metadata: SeoMetadata) {
         "@type": "Organization",
         "@id": `${SITE_ORIGIN}/#organization`,
         name: "聯合微國家組織",
-        alternateName: ["F.U.M.O.", "Federation of United Micronations Organisation"],
+        alternateName: ["FUMO", "F.U.M.O.", "Federation of United Micronations Organisation"],
         url: SITE_ORIGIN,
-        logo: DEFAULT_IMAGE,
+        logo: `${SITE_ORIGIN}/fumo-badge.webp`,
         sameAs: ["https://discord.gg/MuSM3yXrQh"],
       },
       {
         "@type": "WebSite",
         "@id": `${SITE_ORIGIN}/#website`,
         name: SITE_NAME,
+        alternateName: "FUMO",
         url: SITE_ORIGIN,
         inLanguage: ["zh-Hant", "en"],
         publisher: { "@id": `${SITE_ORIGIN}/#organization` },
