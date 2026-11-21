@@ -136,7 +136,7 @@ export default function Votes() {
       <div className="container mx-auto px-3 sm:px-4">
         <div className="fumo-voting-heading mb-10">
           <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-4">{isEnglish ? "Voting" : "投票"}</h1>
-          <p className="text-foreground/70 max-w-2xl mx-auto mb-6">
+          <p className="text-muted-foreground text-foreground/70 max-w-2xl mx-auto mb-6">
             聯合微國家組織的正式投票。每個國家最多三位代表可以註冊，但每個投票每國只能投一票。只有成員國代表才能投票。
           </p>
           {isAdmin && (
