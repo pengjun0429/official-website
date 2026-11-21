@@ -154,6 +154,10 @@ html.dark .fumo-route-body .fumo-activity-settings :is(select, input, button):fo
     outline-color: rgba(127, 182, 202, .7) !important;
 }
 
+html.dark .Article-base {
+    background-color: #202328
+}
+
 html.dark .fumo-admin-page .Div-base {
     background-color: #202328 !important;
     border-color: #363a40 !important;
