@@ -178,15 +178,15 @@ html.dark .fumo-route-body .fumo-activity-settings :is(select, input, button):fo
     outline-color: rgba(127, 182, 202, .7) !important;
 }
 
-html.dark .Article-base {
+html .Article-base {
     background-color: var(--fumo-paper)
 }
 
-html.dark .Article-base p {
+html .Article-base p {
     color: var(--fumo-ink)
 }
 
-html.dark .Article-base strong {
+html .Article-base strong {
     color: var(--fumo-blue)
 }
 
