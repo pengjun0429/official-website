@@ -62,6 +62,18 @@
 }
 
 /* Activity settings use an explicit editorial treatment instead of relying only on utility classes. */
+html.dark .fumo-home {
+  --fumo-blue: #7fb6ca;
+  --fumo-ink: #eceef0;
+  --fumo-muted: #a2a7ae;
+  --fumo-line: #363a40;
+  --fumo-paper: #17191c;
+  --fumo-soft: #202328;
+  --fumo-body-copy: #c4c8ce;
+  --fumo-body-strong: #d9dce0;
+  color-scheme: dark;
+}
+
 .fumo-route-body .fumo-activity-settings {
     --activity-ink: #1d1d1f;
     --activity-muted: #6e6e73;
@@ -155,30 +167,34 @@ html.dark .fumo-route-body .fumo-activity-settings :is(select, input, button):fo
 }
 
 html.dark .Article-base {
-    background-color: #202328
+    background-color: var(--fumo-paper)
 }
 
 html.dark .Article-base p {
-    color: #fff
+    color: var(--fumo-ink)
+}
+
+html.dark .Article-base strong {
+    color: var(--fumo-blue)
 }
 
 html.dark .fumo-admin-page .Div-base {
-    background-color: #202328 !important;
-    border-color: #363a40 !important;
+    background-color: var(--fumo-paper) !important;
+    border-color: var(--fumo-line) !important;
 }
 
 html.dark .fumo-admin-page .fumo-admin-container [class*="bg-white"] {
-    background-color: #252a30 !important;
+    background-color: var(--fumo-paper) !important;
 }
 
 html.dark .fumo-admin-page .fumo-admin-container > [class*="bg-white"] {
-    background-color: #202328 !important;
-    border-color: #363a40 !important;
+    background-color: var(--fumo-paper) !important;
+    border-color: var(--fumo-line) !important;
 }
 
 html.dark .fumo-admin-page input::placeholder,
 html.dark .fumo-admin-page textarea::placeholder {
-    color: #a2a7ae !important;
+    color: var(--fumo-muted) !important;
     opacity: 1;
 }
 
