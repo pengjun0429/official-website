@@ -194,6 +194,7 @@
   letter-spacing: .045em;
   line-height: 1.4;
   text-transform: uppercase;
+  background: var(--site-paper);
 }
 .fumo-page-index::before {
   display: inline-block;
@@ -554,12 +555,12 @@ html.dark .fumo-theme-toggle--mobile { border-color: var(--site-line); }
 
 /* Add dark color list */
 html.dark .fumo-voting-page {
-  --vote-blue: #85B7CC;
+  --vote-blue: #85b7cc;
   --vote-ink: #d2d2d7;
   --vote-muted: #343436;
   --vote-line: #1d1d1f;
-  --vote-paper: #000;
-  --vote-soft: #080808;
+  --vote-paper: #17191c;
+  --vote-soft: #202328;
   background: var(--vote-paper) !important;
   color: var(--vote-ink);
 }
